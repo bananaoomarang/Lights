@@ -43,7 +43,7 @@ function Lights() {
     $(document).mousemove(function(e) {
         var offset = $('canvas').offset();
         this.mouse.x = e.clientX - offset.left;
-        this.mouse.y = e.clientY - offset.top;
+        this.mouse.y = 500 - e.clientY - offset.top;
     }.bind(this));
 }
 

@@ -12,8 +12,8 @@ void main() {
 
     float d = distance(uLightPos, fragPos);
 
-    /*vec3 fragIntensity = vec3(1.0, 1.0, 1.0) / (0.001 + 0.22*d + 0.22*pow(d, 2.0));*/
-    vec3 fragIntensity = vec3(1.0, 1.0, 1.0) / ((0.01) + (0.003*d) + (0.0*pow(d, 2.0)));
+    float atten = 1.0 / (1.0 + 0.0*d + 0.02*d*d);
+    float intensity = 100.0;
 
-    gl_FragColor = vec4(fragIntensity * vec3(1.0, 0.0, 0.0), 1.0);
+    gl_FragColor = vec4(vec3(atten, atten, atten) * intensity, 1.0);
 }
