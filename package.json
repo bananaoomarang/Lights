@@ -1,0 +1,22 @@
+{
+  "name": "lights",
+  "version": "0.0.1",
+  "description": "?",
+  "author": "Milo Mordaunt",
+  "license": "MIT",
+  "main": "client/main.js",
+  "scripts": {
+    "start": "browserify . -d -o public/bundle.js && node index.js"
+  },
+  "dependencies": {
+    "express": "~3.4.8",
+    "brfs": "~0.1.0",
+    "browserify-shim": "~3.2.2"
+  },
+  "browserify-shim": {
+      "jquery": "global: $"
+  },
+  "browserify": {
+      "transform": ["brfs", "browserify-shim"]
+  }
+}
