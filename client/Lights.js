@@ -5,9 +5,11 @@ var fs = require('fs'),
 
 module.exports = Lights;
 
+var WIDTH = 500,
+    HEIGHT = 500,
+    BRICK_SIZE = 25;
+
 function Lights() {
-    this.WIDTH = 500;
-    this.HEIGHT = 500;
     this.mouse = {x: 0, y: 0};
     this.bricks = [];
 
@@ -16,13 +18,16 @@ function Lights() {
     this.shaderProgram = this.getShaderProgram(vertShader, fragShader);
     this.gl.useProgram(this.shaderProgram);
 
-    this.projectionMatrix = this.makeProjectionMatrix(this.WIDTH, this.HEIGHT);
+    this.projectionMatrix = this.makeProjectionMatrix(WIDTH, HEIGHT);
     this.modelViewMatrix = [];
     
     this.uModelViewProjectionMatrix = null;
     this.uColor = null;
     this.uLightPos = null;
+    this.uLightIntensity = null;
     this.setUniforms();
+    
+    this.gl.uniform1f(this.uLightIntensity, 100);
 
     this.positionAttribute = this.gl.getAttribLocation(this.shaderProgram, "position");
 
@@ -114,19 +119,20 @@ Lights.prototype.getShaderProgram = function(vert, frag) {
 Lights.prototype.setUniforms = function() {
     this.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.shaderProgram, 'uModelViewProjectionMatrix');
     this.uColor = this.gl.getUniformLocation(this.shaderProgram, 'uColor');
-    this.uLightPos= this.gl.getUniformLocation(this.shaderProgram, 'uLightPos');
+    this.uLightPos = this.gl.getUniformLocation(this.shaderProgram, 'uLightPos');
+    this.uLightIntensity = this.gl.getUniformLocation(this.shaderProgram, 'uLightIntensity');
 };
 
 Lights.prototype.loadBuffers = function() {
-    var vertices = [
-            0,   0,
-            0,   50,
-            50, 0,
-            50, 50
+    var brickVertices = [
+            0,          0,
+            0,          BRICK_SIZE,
+            BRICK_SIZE, 0,
+            BRICK_SIZE, BRICK_SIZE
         ];
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
-    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(vertices), this.gl.STATIC_DRAW);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(brickVertices), this.gl.STATIC_DRAW);
     this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
 };
 
