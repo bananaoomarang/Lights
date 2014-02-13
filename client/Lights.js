@@ -35,7 +35,6 @@ function Lights() {
     this.uColor = null;
     this.uLightPos = null;
     this.uLightIntensity = null;
-    this.uDrawAABB = null;
     this.setUniforms();
     
     this.gl.uniform1f(this.uLightIntensity, 100);
@@ -79,20 +78,12 @@ function Lights() {
         this.player.vel.x = 0;
     }.bind(this));
 
-    kd.Q.press(function() {
-        if(this.drawAABB)
-            this.drawAABB = false;
-        else
-            this.drawAABB = true;
-    }.bind(this));
-
     this.spawnLevel();
 }
 
 Lights.prototype.update = function(dt) {
     kd.tick();
     this.gl.uniform2f(this.uLightPos, this.mouse.x, this.mouse.y);
-
 
     this.player.acc.y = GRAVITY;
 
@@ -119,19 +110,10 @@ Lights.prototype.draw = function() {
 
     for (var b = 0; b < this.bricks.length; b++) {
         var brick = this.bricks[b];
-        if(this.drawAABB) {
-            this.gl.uniform1i(this.uDrawAABB, 1);
 
-            this.mvpMatrix = this.matrixMultiply(brick.mvMatrix, this.projectionMatrix);
-            this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
-            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-
-            this.gl.uniform1i(this.uDrawAABB, 0);
-        } else {
-            this.mvpMatrix = this.matrixMultiply(brick.mvMatrix, this.projectionMatrix);
-            this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
-            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-        }
+        this.mvpMatrix = this.matrixMultiply(brick.mvMatrix, this.projectionMatrix);
+        this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
+        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
 
     // Draw the player
