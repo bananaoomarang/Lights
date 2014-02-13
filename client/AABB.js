@@ -21,35 +21,31 @@ AABB.prototype.intersects = function(aabb) {
        this.min.y > aabb.max.y) {
            return false;
        } else {
-           console.log('this', this.max.y);
-           console.log('that', aabb.min.y);
-           //var vec = new Vector(0, 0);
+           var vec = new Vector(0, 0);
 
-           //var left = (aabb.min.x - this.max.x),
-               //right = (aabb.max.x - this.min.x),
-               //top = (aabb.min.y - this.max.y),
-               //bottom = (aabb.max.y - this.min.y);
+           var left = (aabb.min.x - this.max.x),
+               right = (aabb.max.x - this.min.x),
+               top = (aabb.min.y - this.max.y),
+               bottom = (aabb.max.y - this.min.y);
 
-           //if(Math.abs(left) < right) {
-               //vec.x = -left;
-           //} else {
-               //vec.x = -right;
-           //}
+           if(Math.abs(left) < right) {
+               vec.x = -left;
+           } else {
+               vec.x = -right;
+           }
 
-           //if(Math.abs(top) < bottom) {
-               //vec.y = -top;
-           //} else {
-               //vec.y = -bottom;
-           //}
+           if(Math.abs(top) < bottom) {
+               vec.y = -top;
+           } else {
+               vec.y = -bottom;
+           }
 
-           //if(Math.abs(vec.x) < Math.abs(vec.y)) {
-               //vec.y = 0;
-           //} else {
-               //vec.x = 0;
-           //}
+           if(Math.abs(vec.x) < Math.abs(vec.y)) {
+               vec.y = 0;
+           } else {
+               vec.x = 0;
+           }
 
-           //return vec;
-
-           return true;
+           return vec;
        }
 };

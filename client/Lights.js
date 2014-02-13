@@ -18,7 +18,7 @@ var WIDTH = 500,
 kd.stop();
 
 function Lights() {
-    this.mouse = {x: 0, y: 0};
+    this.mouse = new Vector(0, 0);
     this.player = new Player(0, 0);
     this.bricks = [];
     this.drawAABB = false;
@@ -52,6 +52,7 @@ function Lights() {
     // Set up buffers and the like
     this.brickBuffer = this.gl.createBuffer();
     this.playerBuffer = this.gl.createBuffer();
+    this.torchBuffer = this.gl.createBuffer();
     this.loadBuffers();
 
     $(document).mousemove(function(e) {
@@ -92,8 +93,8 @@ Lights.prototype.update = function(dt) {
     kd.tick();
     this.gl.uniform2f(this.uLightPos, this.mouse.x, this.mouse.y);
 
-    this.player.acc.y = GRAVITY;
 
+    this.player.acc.y = GRAVITY;
 
     for (var b = 0; b < this.bricks.length; b++) {
         var brick = this.bricks[b];
@@ -114,6 +115,7 @@ Lights.prototype.draw = function() {
     // Draw the bricks
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
+    this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
 
     for (var b = 0; b < this.bricks.length; b++) {
         var brick = this.bricks[b];
@@ -133,11 +135,22 @@ Lights.prototype.draw = function() {
     }
 
     // Draw the player
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
-    
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.playerBuffer);
+    this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
 
     this.mvpMatrix = this.matrixMultiply(this.player.mvMatrix, this.projectionMatrix);
+    this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    
+    // Draw the torch
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.torchBuffer);
+    this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
+
+    // This is the angle between the mouse and the player....
+    var theta = Math.atan2(this.mouse.x - this.player.pos.x, (HEIGHT - this.mouse.y) - this.player.pos.y);
+
+    this.mvpMatrix = this.matrixMultiply(this.makeRotationMatrix(theta), this.player.mvMatrix);
+    this.mvpMatrix = this.matrixMultiply(this.mvpMatrix, this.projectionMatrix);
     this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
 };
@@ -224,13 +237,22 @@ Lights.prototype.loadBuffers = function() {
             BRICK_SIZE, BRICK_SIZE*2
         ];
 
+    var torchVertices = [
+            0,          0,
+            0,          BRICK_SIZE,
+            BRICK_SIZE / 2, 0,
+            BRICK_SIZE / 2, BRICK_SIZE
+        ];
+
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(brickVertices), this.gl.STATIC_DRAW);
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.playerBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(playerVertices), this.gl.STATIC_DRAW);
+    
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.torchBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(torchVertices), this.gl.STATIC_DRAW);
 
-    this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
 };
 
 Lights.prototype.loadIdentity = function() {
@@ -277,5 +299,17 @@ Lights.prototype.makeProjectionMatrix = function(width, height) {
         2 / width, 0,          0,
         0,        -2 / height, 0,
        -1,         1,          1
+    ];
+};
+
+
+Lights.prototype.makeRotationMatrix = function(angle) {
+    var c = Math.cos(angle),
+        s = Math.sin(angle);
+
+    return [
+        c, -s, 0,
+        s,  c, 0,
+        0,  0, 1
     ];
 };

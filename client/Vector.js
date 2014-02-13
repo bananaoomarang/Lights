@@ -43,3 +43,15 @@ Vector.prototype.scalar = function(s) {
 Vector.prototype.reverse = function() {
     return new Vector(this.x * -1, this.y * -1);
 };
+
+Vector.prototype.dp = function(v) {
+    return this.x*v.x + this.y*v.y;
+};
+
+Vector.prototype.length = function() {
+    return Math.sqrt(Math.pow(this.x, 2) * Math.pow(this.y, 2));
+};
+
+Vector.prototype.angle = function(v) {
+    return Math.acos(this.dp(v) / this.length() * v.length());
+};
