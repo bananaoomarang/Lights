@@ -2,6 +2,7 @@ precision mediump float;
 
 uniform vec4 uColor;
 uniform vec2 uLightPos;
+uniform vec2 uLightAngle;
 uniform float uLightIntensity;
 
 void main() {

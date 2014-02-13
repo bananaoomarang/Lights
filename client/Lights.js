@@ -34,8 +34,9 @@ function Lights() {
     this.uModelViewProjectionMatrix = null;
     this.uColor = null;
     this.uLightPos = null;
+    this.uLightAngle = null;
     this.uLightIntensity = null;
-    this.setUniforms();
+    this.getUniforms();
     
     this.gl.uniform1f(this.uLightIntensity, 100);
 
@@ -57,7 +58,7 @@ function Lights() {
     $(document).mousemove(function(e) {
         var offset = $('canvas').offset();
         this.mouse.x = e.clientX - offset.left;
-        this.mouse.y = 500 - e.clientY - offset.top;
+        this.mouse.y = e.clientY - offset.top;
     }.bind(this));
 
     kd.RIGHT.down(function() {
@@ -83,7 +84,7 @@ function Lights() {
 
 Lights.prototype.update = function(dt) {
     kd.tick();
-    this.gl.uniform2f(this.uLightPos, this.mouse.x, this.mouse.y);
+    this.gl.uniform2f(this.uLightPos, this.player.pos.x, (HEIGHT - this.player.pos.y));
 
     this.player.acc.y = GRAVITY;
 
@@ -129,9 +130,11 @@ Lights.prototype.draw = function() {
     this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
 
     // This is the angle between the mouse and the player....
-    var theta = Math.atan2(this.mouse.x - this.player.pos.x, (HEIGHT - this.mouse.y) - this.player.pos.y);
+    var torchAngle = Math.atan2(this.mouse.x - this.player.pos.x, this.mouse.y - this.player.pos.y);
 
-    this.mvpMatrix = this.matrixMultiply(this.makeRotationMatrix(theta), this.player.mvMatrix);
+    this.gl.uniform1f(this.uLightAngle, torchAngle);
+
+    this.mvpMatrix = this.matrixMultiply(this.makeRotationMatrix(torchAngle), this.player.mvMatrix);
     this.mvpMatrix = this.matrixMultiply(this.mvpMatrix, this.projectionMatrix);
     this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
@@ -196,12 +199,12 @@ Lights.prototype.getShaderProgram = function(vert, frag) {
     return program;
 };
 
-Lights.prototype.setUniforms = function() {
+Lights.prototype.getUniforms = function() {
     this.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.shaderProgram, 'uModelViewProjectionMatrix');
     this.uColor = this.gl.getUniformLocation(this.shaderProgram, 'uColor');
     this.uLightPos = this.gl.getUniformLocation(this.shaderProgram, 'uLightPos');
+    this.uLightAngle = this.gl.getUniformLocation(this.shaderProgram, 'uLightAngle');
     this.uLightIntensity = this.gl.getUniformLocation(this.shaderProgram, 'uLightIntensity');
-    this.uDrawAABB = this.gl.getUniformLocation(this.shaderProgram, 'uDrawAABB');
 };
 
 Lights.prototype.loadBuffers = function() {
