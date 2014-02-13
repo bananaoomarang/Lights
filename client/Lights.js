@@ -47,7 +47,7 @@ function Lights() {
     this.loadIdentity();
     this.mvpMatrix = this.matrixMultiply(this.modelViewMatrix, this.projectionMatrix);
     this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
-    this.gl.clearColor(0.0, 0.013, 0.022, 1.0);
+    this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
     // Set up buffers and the like
     this.brickBuffer = this.gl.createBuffer();
