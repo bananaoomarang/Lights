@@ -1,8 +1,11 @@
+var AABB = require('./AABB');
+
 module.exports = Brick;
 
 function Brick(x, y) {
-    this.w = 50;
-    this.h = 50;
+    this.w = 25;
+    this.h = 25;
+    this.aabb = new AABB(x, y, x + this.w, y + this.h);
 
     this.vertexBuffer = null;
     this.mvMatrix = [1, 0, 0, 

@@ -1,17 +1,27 @@
 var fs = require('fs'),
     vertShader = fs.readFileSync(__dirname + '/vert.glsl'),
     fragShader = fs.readFileSync(__dirname + '/frag.glsl'),
-    Brick = require('./Brick');
+    kd = require('./lib/keydrown.min.js'),
+    Vector = require('./Vector'),
+    Brick = require('./Brick'),
+    Player = require('./Player');
 
 module.exports = Lights;
 
 var WIDTH = 500,
     HEIGHT = 500,
-    BRICK_SIZE = 25;
+    BRICK_SIZE = 25,
+    GRAVITY = 50,
+    PLAYER_VEL = 50;
+
+// Cancel the unneeded kdrown loop
+kd.stop();
 
 function Lights() {
     this.mouse = {x: 0, y: 0};
+    this.player = new Player(0, 0);
     this.bricks = [];
+    this.drawAABB = false;
 
     // Setup OpenGL Shiz
     this.gl = this.getGL();
@@ -25,6 +35,7 @@ function Lights() {
     this.uColor = null;
     this.uLightPos = null;
     this.uLightIntensity = null;
+    this.uDrawAABB = null;
     this.setUniforms();
     
     this.gl.uniform1f(this.uLightIntensity, 100);
@@ -43,37 +54,104 @@ function Lights() {
 
     this.loadBuffers();
 
-    this.spawnBrick(100, 100);
-
     $(document).mousemove(function(e) {
         var offset = $('canvas').offset();
         this.mouse.x = e.clientX - offset.left;
         this.mouse.y = 500 - e.clientY - offset.top;
     }.bind(this));
+
+    kd.RIGHT.down(function() {
+        this.player.acc.x = PLAYER_VEL;
+    }.bind(this));
+    
+    kd.RIGHT.up(function() {
+        this.player.acc.x = 0;
+        this.player.vel.x = 0;
+    }.bind(this));
+    
+    kd.LEFT.down(function() {
+        this.player.acc.x = -PLAYER_VEL;
+    }.bind(this));
+    
+    kd.LEFT.up(function() {
+        this.player.acc.x = 0;
+        this.player.vel.x = 0;
+    }.bind(this));
+
+    kd.Q.press(function() {
+        if(this.drawAABB)
+            this.drawAABB = false;
+        else
+            this.drawAABB = true;
+    }.bind(this));
+
+    this.spawnLevel();
 }
 
 Lights.prototype.update = function(dt) {
+    kd.tick();
     this.gl.uniform2f(this.uLightPos, this.mouse.x, this.mouse.y);
+
+    this.player.acc.y = GRAVITY;
+
+
+    for (var b = 0; b < this.bricks.length; b++) {
+        var brick = this.bricks[b];
+
+        if(this.player.aabb.intersects(brick.aabb)) {
+            this.player.acc.y = 0;
+            this.player.vel.y = 0;
+        }
+    }
+
+    this.player.update(dt);
 };
 
 Lights.prototype.draw = function() {
+
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
 
     for (var b = 0; b < this.bricks.length; b++) {
         var brick = this.bricks[b];
+        if(this.drawAABB) {
+            this.gl.uniform1i(this.uDrawAABB, 1);
 
-        this.mvpMatrix = this.matrixMultiply(brick.mvMatrix, this.projectionMatrix);
-        this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+            this.mvpMatrix = this.matrixMultiply(brick.mvMatrix, this.projectionMatrix);
+            this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
+            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+
+            this.gl.uniform1i(this.uDrawAABB, 0);
+        } else {
+            this.mvpMatrix = this.matrixMultiply(brick.mvMatrix, this.projectionMatrix);
+            this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
+            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+        }
     }
+
+    this.mvpMatrix = this.matrixMultiply(this.player.mvMatrix, this.projectionMatrix);
+    this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
 };
 
+// treats the level as a 20x20 grid (assuming the world stays 500x500)
 Lights.prototype.spawnBrick = function(x, y) {
-    var brick = new Brick(x, y, 10, 10);
+    var brick = new Brick(x*BRICK_SIZE, y*BRICK_SIZE);
 
     this.bricks.push(brick);
+};
+
+Lights.prototype.spawnLevel = function() {
+    this.spawnBrick(0, 5);
+    this.spawnBrick(1, 6);
+    this.spawnBrick(2, 7);
+    this.spawnBrick(3, 7);
+    this.spawnBrick(4, 7);
+    this.spawnBrick(5, 7);
+    this.spawnBrick(0, 6);
+    this.spawnBrick(0, 7);
+    this.spawnBrick(1, 7);
 };
 
 Lights.prototype.getGL = function() {
@@ -121,6 +199,7 @@ Lights.prototype.setUniforms = function() {
     this.uColor = this.gl.getUniformLocation(this.shaderProgram, 'uColor');
     this.uLightPos = this.gl.getUniformLocation(this.shaderProgram, 'uLightPos');
     this.uLightIntensity = this.gl.getUniformLocation(this.shaderProgram, 'uLightIntensity');
+    this.uDrawAABB = this.gl.getUniformLocation(this.shaderProgram, 'uDrawAABB');
 };
 
 Lights.prototype.loadBuffers = function() {
