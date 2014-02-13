@@ -12,7 +12,7 @@ var WIDTH = 500,
     HEIGHT = 500,
     BRICK_SIZE = 25,
     GRAVITY = 50,
-    PLAYER_VEL = 50;
+    PLAYER_ACC = 300;
 
 // Cancel the unneeded kdrown loop
 kd.stop();
@@ -51,7 +51,7 @@ function Lights() {
 
     // Set up buffers and the like
     this.brickBuffer = this.gl.createBuffer();
-
+    this.playerBuffer = this.gl.createBuffer();
     this.loadBuffers();
 
     $(document).mousemove(function(e) {
@@ -61,7 +61,7 @@ function Lights() {
     }.bind(this));
 
     kd.RIGHT.down(function() {
-        this.player.acc.x = PLAYER_VEL;
+        this.player.acc.x = PLAYER_ACC;
     }.bind(this));
     
     kd.RIGHT.up(function() {
@@ -70,7 +70,7 @@ function Lights() {
     }.bind(this));
     
     kd.LEFT.down(function() {
-        this.player.acc.x = -PLAYER_VEL;
+        this.player.acc.x = -PLAYER_ACC;
     }.bind(this));
     
     kd.LEFT.up(function() {
@@ -111,6 +111,8 @@ Lights.prototype.draw = function() {
 
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
+    // Draw the bricks
+
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
 
     for (var b = 0; b < this.bricks.length; b++) {
@@ -129,6 +131,11 @@ Lights.prototype.draw = function() {
             this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
         }
     }
+
+    // Draw the player
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
+    
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.playerBuffer);
 
     this.mvpMatrix = this.matrixMultiply(this.player.mvMatrix, this.projectionMatrix);
     this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
@@ -209,9 +216,20 @@ Lights.prototype.loadBuffers = function() {
             BRICK_SIZE, 0,
             BRICK_SIZE, BRICK_SIZE
         ];
+    
+    var playerVertices = [
+            0,          0,
+            0,          BRICK_SIZE*2,
+            BRICK_SIZE, 0,
+            BRICK_SIZE, BRICK_SIZE*2
+        ];
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(brickVertices), this.gl.STATIC_DRAW);
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.playerBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(playerVertices), this.gl.STATIC_DRAW);
+
     this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
 };
 
