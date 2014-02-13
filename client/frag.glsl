@@ -1,8 +1,10 @@
 precision mediump float;
 
+const float PI = 3.1415826;
+
 uniform vec4 uColor;
 uniform vec2 uLightPos;
-uniform vec2 uLightAngle;
+uniform float uLightAngle;
 uniform float uLightIntensity;
 
 void main() {
@@ -13,5 +15,13 @@ void main() {
 
     float atten = 1.0 / (1.0 + 0.0*d + 0.02*d*d);
 
-    gl_FragColor = vec4(vec3(atten, atten, atten) * uLightIntensity, 1.0);
+    vec3 lightColor = vec3(atten, atten, atten) * uLightIntensity;
+
+    float angleFromLight = atan(fragPos.x - uLightPos.x, -(fragPos.y - uLightPos.y)) - uLightAngle; 
+
+    if(abs(angleFromLight) < (PI / 4.0) && abs(angleFromLight) > 0.0) {
+        gl_FragColor = vec4(lightColor, 1.0);
+    } else {
+        gl_FragColor = vec4(0.0, 0.013, 0.022, 1.0);
+    }
 }
