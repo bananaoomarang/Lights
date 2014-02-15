@@ -19,6 +19,7 @@ kd.stop();
 
 function Lights() {
     this.mouse = new Vector(0, 0);
+    this.mouseDown = false;
     this.player = new Player(0, 0);
     this.bricks = [];
     this.drawAABB = false;
@@ -34,6 +35,7 @@ function Lights() {
     this.uModelViewProjectionMatrix = null;
     this.uColor = null;
     this.uLightPos = null;
+    this.uLight = null;
     this.uLightAngle = null;
     this.uLightIntensity = null;
     this.getUniforms();
@@ -61,6 +63,14 @@ function Lights() {
         this.mouse.y = e.clientY - offset.top;
     }.bind(this));
 
+    $(document).mousedown(function() {
+        this.mouseDown = true;
+    }.bind(this));
+    
+    $(document).mouseup(function() {
+        this.mouseDown = false;
+    }.bind(this));
+
     kd.RIGHT.down(function() {
         this.player.acc.x = PLAYER_ACC;
     }.bind(this));
@@ -84,7 +94,13 @@ function Lights() {
 
 Lights.prototype.update = function(dt) {
     kd.tick();
-    this.gl.uniform2f(this.uLightPos, this.player.pos.x, (HEIGHT - this.player.pos.y));
+
+    if(this.mouseDown) {
+        this.gl.uniform2f(this.uLightPos, this.player.pos.x, (HEIGHT - this.player.pos.y));
+        this.gl.uniform1i(this.uLight, 1);
+    } else {
+        this.gl.uniform1i(this.uLight, 0);
+    }
 
     this.player.acc.y = GRAVITY;
 
@@ -203,6 +219,7 @@ Lights.prototype.getUniforms = function() {
     this.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.shaderProgram, 'uModelViewProjectionMatrix');
     this.uColor = this.gl.getUniformLocation(this.shaderProgram, 'uColor');
     this.uLightPos = this.gl.getUniformLocation(this.shaderProgram, 'uLightPos');
+    this.uLight = this.gl.getUniformLocation(this.shaderProgram, 'uLight');
     this.uLightAngle = this.gl.getUniformLocation(this.shaderProgram, 'uLightAngle');
     this.uLightIntensity = this.gl.getUniformLocation(this.shaderProgram, 'uLightIntensity');
 };
