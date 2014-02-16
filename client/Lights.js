@@ -16,6 +16,29 @@ var WIDTH = 500,
     PLAYER_ACC = 300,
     PLAYER_JUMP = 150;
 
+var LEVEL = [ 
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+];
+
 // Cancel the unneeded kdrown loop
 kd.stop();
 
@@ -101,7 +124,7 @@ function Lights() {
         }
     }.bind(this));
     
-    this.spawnLevel();
+    this.loadLevel(LEVEL);
 }
 
 Lights.prototype.update = function(dt) {
@@ -178,28 +201,12 @@ Lights.prototype.spawnBrick = function(x, y) {
     this.bricks.push(brick);
 };
 
-Lights.prototype.spawnLevel = function() {
-    this.spawnBrick(0, 5);
-    this.spawnBrick(1, 6);
-    this.spawnBrick(2, 7);
-    this.spawnBrick(3, 7);
-    this.spawnBrick(4, 7);
-    this.spawnBrick(5, 7);
-    this.spawnBrick(6, 7);
-    this.spawnBrick(7, 7);
-    this.spawnBrick(8, 7);
-    this.spawnBrick(9, 7);
-    this.spawnBrick(10, 7);
-    this.spawnBrick(11, 7);
-    this.spawnBrick(11, 8);
-    this.spawnBrick(11, 9);
-    this.spawnBrick(11, 10);
-    this.spawnBrick(11, 11);
-    this.spawnBrick(12, 11);
-    this.spawnBrick(13, 11);
-    this.spawnBrick(0, 6);
-    this.spawnBrick(0, 7);
-    this.spawnBrick(1, 7);
+Lights.prototype.loadLevel = function(l) {
+    for (var y = 0; y < l.length; y++) {
+        for (var x = 0; x < l[y].length; x++) {
+            if(l[y][x] === 1) this.spawnBrick(x, y);
+        }
+    }
 };
 
 Lights.prototype.getGL = function() {
