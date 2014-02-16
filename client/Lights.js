@@ -3,6 +3,7 @@ var fs = require('fs'),
     fragShader = fs.readFileSync(__dirname + '/frag.glsl'),
     kd = require('./lib/keydrown.min.js'),
     Vector = require('./Vector'),
+    AABB = require('./AABB'),
     Brick = require('./Brick'),
     Player = require('./Player');
 
@@ -11,8 +12,9 @@ module.exports = Lights;
 var WIDTH = 500,
     HEIGHT = 500,
     BRICK_SIZE = 25,
-    GRAVITY = 50,
-    PLAYER_ACC = 300;
+    GRAVITY = 300,
+    PLAYER_ACC = 300,
+    PLAYER_JUMP = 150;
 
 // Cancel the unneeded kdrown loop
 kd.stop();
@@ -71,24 +73,34 @@ function Lights() {
         this.mouseDown = false;
     }.bind(this));
 
-    kd.RIGHT.down(function() {
+    kd.D.down(function() {
         this.player.acc.x = PLAYER_ACC;
     }.bind(this));
     
-    kd.RIGHT.up(function() {
+    kd.D.up(function() {
         this.player.acc.x = 0;
         this.player.vel.x = 0;
     }.bind(this));
     
-    kd.LEFT.down(function() {
+    kd.A.down(function() {
         this.player.acc.x = -PLAYER_ACC;
     }.bind(this));
     
-    kd.LEFT.up(function() {
+    kd.A.up(function() {
         this.player.acc.x = 0;
         this.player.vel.x = 0;
     }.bind(this));
-
+    
+    kd.W.press(function() {
+        var underPlayer = new AABB(this.player.pos.x, this.player.pos.y + this.player.h, this.player.pos.x + this.player.w, this.player.pos.y + this.player.h + 1);
+        for (var i = 0; i < this.bricks.length; i++) {
+            var aabb = this.bricks[i].aabb;
+            if(underPlayer.intersects(aabb)) {
+                this.player.vel.y = -PLAYER_JUMP;
+            }
+        }
+    }.bind(this));
+    
     this.spawnLevel();
 }
 
@@ -104,16 +116,19 @@ Lights.prototype.update = function(dt) {
 
     this.player.acc.y = GRAVITY;
 
-    for (var b = 0; b < this.bricks.length; b++) {
-        var brick = this.bricks[b];
+    this.player.update(dt);
 
-        if(this.player.aabb.intersects(brick.aabb)) {
+    for (var b = 0; b < this.bricks.length; b++) {
+        var brick = this.bricks[b],
+            intersect = this.player.aabb.intersects(brick.aabb);
+
+        if(intersect) {
+            this.player.pos.add(intersect.scalar(-1));
             this.player.acc.y = 0;
             this.player.vel.y = 0;
         }
     }
 
-    this.player.update(dt);
 };
 
 Lights.prototype.draw = function() {
@@ -170,6 +185,18 @@ Lights.prototype.spawnLevel = function() {
     this.spawnBrick(3, 7);
     this.spawnBrick(4, 7);
     this.spawnBrick(5, 7);
+    this.spawnBrick(6, 7);
+    this.spawnBrick(7, 7);
+    this.spawnBrick(8, 7);
+    this.spawnBrick(9, 7);
+    this.spawnBrick(10, 7);
+    this.spawnBrick(11, 7);
+    this.spawnBrick(11, 8);
+    this.spawnBrick(11, 9);
+    this.spawnBrick(11, 10);
+    this.spawnBrick(11, 11);
+    this.spawnBrick(12, 11);
+    this.spawnBrick(13, 11);
     this.spawnBrick(0, 6);
     this.spawnBrick(0, 7);
     this.spawnBrick(1, 7);

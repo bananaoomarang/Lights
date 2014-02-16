@@ -16,6 +16,7 @@ vec4 getLight() {
 
     float angleFromLight = atan(fragPos.x - uLightPos.x, -(fragPos.y - uLightPos.y)) - uLightAngle;
     vec2 normalFromLight = vec2(cos(angleFromLight), sin(angleFromLight));
+    vec2 fragVector = normalize(fragPos) - normalFromLight;
 
     float dp = abs(dot(normalFromLight, normalize(fragPos)));
 

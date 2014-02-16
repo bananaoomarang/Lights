@@ -2,7 +2,7 @@ var Vector = require('./Vector'),
     AABB = require('./AABB');
 
 module.exports = Player;
-
+    
 var MAX_SPEED = 200;
 
 function Player(x, y) {
@@ -25,10 +25,12 @@ function Player(x, y) {
 }
 
 Player.prototype.update = function(dt) {
-    if(Math.abs(this.vel.x) <= MAX_SPEED) {
-        this.vel.add(this.acc.scalar(dt));
-    } else {
+    this.vel.add(this.acc.scalar(dt));
+
+    if(this.vel.x > MAX_SPEED) {
         this.vel.x = MAX_SPEED;
+    } else if(this.vel.x < -MAX_SPEED) {
+        this.vel.x = -MAX_SPEED;
     }
 
     this.pos.add(this.vel.scalar(dt));
