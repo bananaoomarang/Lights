@@ -96,7 +96,7 @@ Lights.prototype.update = function(dt) {
     kd.tick();
 
     if(this.mouseDown) {
-        this.gl.uniform2f(this.uLightPos, this.player.pos.x, (HEIGHT - this.player.pos.y));
+        this.gl.uniform2f(this.uLightPos, this.player.pos.x, HEIGHT - (this.player.pos.y + (this.player.w / 2)));
         this.gl.uniform1i(this.uLight, 1);
     } else {
         this.gl.uniform1i(this.uLight, 0);
@@ -150,7 +150,7 @@ Lights.prototype.draw = function() {
 
     this.gl.uniform1f(this.uLightAngle, torchAngle);
 
-    this.mvpMatrix = this.matrixMultiply(this.makeRotationMatrix(torchAngle), this.player.mvMatrix);
+    this.mvpMatrix = this.matrixMultiply(this.makeRotationMatrix(torchAngle), this.player.torchMvMatrix);
     this.mvpMatrix = this.matrixMultiply(this.mvpMatrix, this.projectionMatrix);
     this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);

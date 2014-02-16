@@ -18,6 +18,10 @@ function Player(x, y) {
     this.mvMatrix = [1, 0, 0, 
                      0, 1, 0,
                      x, y, 1];
+
+    this.torchMvMatrix = [1, 0, 0, 
+                          0, 1, 0,
+                          x, y + (this.h / 2), 1];
 }
 
 Player.prototype.update = function(dt) {
@@ -33,4 +37,7 @@ Player.prototype.update = function(dt) {
 
     this.mvMatrix[6] = this.pos.x;
     this.mvMatrix[7] = this.pos.y;
+    
+    this.torchMvMatrix[6] = this.pos.x;
+    this.torchMvMatrix[7] = this.pos.y + (this.h / 2);
 };

@@ -17,13 +17,13 @@ vec4 getLight() {
     float angleFromLight = atan(fragPos.x - uLightPos.x, -(fragPos.y - uLightPos.y)) - uLightAngle;
     vec2 normalFromLight = vec2(cos(angleFromLight), sin(angleFromLight));
 
-    float dp = 1.0 - abs(dot(normalFromLight, normalize(fragPos)));
+    float dp = abs(dot(normalFromLight, normalize(fragPos)));
 
-    float atten = dp / (1.0 + 0.0*d + 0.02*d*d);
+    float atten = 1.0 / (1.0 + 0.0*d + 0.02*d*d);
     
     vec3 lightColor = vec3(atten, atten, atten) * uLightIntensity;
 
-    if(abs(angleFromLight) < (PI / 4.0) && abs(angleFromLight) > 0.0) {
+    if(abs(angleFromLight) < (PI / 8.0) && abs(angleFromLight) > 0.0) {
         return vec4(lightColor, 1.0);
     } else {
         return vec4(0.0, 0.0, 0.0, 1.0);
