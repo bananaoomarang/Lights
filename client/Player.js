@@ -22,25 +22,31 @@ function Player(x, y) {
     this.torchMvMatrix = [1, 0, 0, 
                           0, 1, 0,
                           x, y + (this.h / 2), 1];
+
+    // Override vector function for pro hax
+    this.pos.add = function(v) {
+        this.pos.x += v.x;
+        this.pos.y += v.y;
+    
+        this.aabb.translate(this.pos);
+
+        this.mvMatrix[6] = this.pos.x;
+        this.mvMatrix[7] = this.pos.y;
+    }.bind(this);
+
+    this.pos.set = function(v) {
+        this.pos.x = v.x;
+        this.pos.y = v.y;
+        
+        this.aabb.translate(this.pos);
+
+        this.mvMatrix[6] = this.pos.x;
+        this.mvMatrix[7] = this.pos.y;
+    }.bind(this);
 }
 
 Player.prototype.update = function(dt) {
-    this.vel.add(this.acc.scalar(dt));
-    
     var facing = this.vel.normalize();
-
-    if(this.vel.x > MAX_SPEED) {
-        this.vel.x = MAX_SPEED;
-    } else if(this.vel.x < -MAX_SPEED) {
-        this.vel.x = -MAX_SPEED;
-    }
-
-    this.pos.add(this.vel.scalar(dt));
-
-    this.aabb.translate(this.pos);
-
-    this.mvMatrix[6] = this.pos.x;
-    this.mvMatrix[7] = this.pos.y;
 
     //if(facing.x < 0) {
         this.torchMvMatrix[6] = this.pos.x;
@@ -49,4 +55,16 @@ Player.prototype.update = function(dt) {
     //}
         
     this.torchMvMatrix[7] = this.pos.y + (this.h / 2);
+};
+
+Player.prototype.applyPhysics = function(dt) {
+    this.vel.add(this.acc.scalar(dt));
+    
+    if(this.vel.x > MAX_SPEED) {
+        this.vel.x = MAX_SPEED;
+    } else if(this.vel.x < -MAX_SPEED) {
+        this.vel.x = -MAX_SPEED;
+    }
+
+    this.pos.add(this.vel.scalar(dt));
 };

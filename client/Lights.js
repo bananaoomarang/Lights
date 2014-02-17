@@ -7,6 +7,7 @@ var fs = require('fs'),
     Vector = require('./Vector'),
     AABB = require('./AABB'),
     Brick = require('./Brick'),
+    Creature = require('./Creature'),
     Player = require('./Player');
 
 module.exports = Lights;
@@ -35,7 +36,7 @@ var LEVEL = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0],
     [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -49,7 +50,7 @@ function Lights() {
     this.mouseDown = false;
     this.player = new Player(0, 0);
     this.bricks = [];
-    this.drawAABB = false;
+    this.creatures = [];
 
     // Setup OpenGL Shiz
     this.gl = this.getGL();
@@ -84,6 +85,7 @@ function Lights() {
     this.brickBuffer = this.gl.createBuffer();
     this.playerBuffer = this.gl.createBuffer();
     this.torchBuffer = this.gl.createBuffer();
+    this.creatureBuffer = this.gl.createBuffer();
     this.loadBuffers();
 
     // Load sounds
@@ -110,19 +112,26 @@ Lights.prototype.update = function(dt) {
 
     this.player.acc.y = GRAVITY;
 
-    this.player.update(dt);
-
+    this.player.applyPhysics(dt);
+    
     for (var b = 0; b < this.bricks.length; b++) {
         var brick = this.bricks[b],
             intersect = this.player.aabb.intersects(brick.aabb);
 
         if(intersect) {
             this.player.pos.add(intersect.scalar(-1));
-            this.player.acc.y = 0;
-            this.player.vel.y = 0;
+
+            if(Math.abs(intersect.x) > 0) this.player.vel.x = 0;
+            if(Math.abs(intersect.y) > 0) this.player.vel.y = 0;
         }
     }
 
+    if(this.player.pos.x < 0) this.player.pos.x = 0;
+    if(this.player.pos.x + this.player.w > WIDTH) this.player.pos.x = WIDTH - this.player.w;
+    if(this.player.pos.y < 0) this.player.pos.y = 0;
+    if(this.player.pos.y + this.player.h > HEIGHT) this.player.pos.y = HEIGHT - this.player.w;
+
+    this.player.update(dt);
 };
 
 Lights.prototype.draw = function() {
@@ -154,7 +163,7 @@ Lights.prototype.draw = function() {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.torchBuffer);
     this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
 
-    // This is the angle between the mouse and the player....
+    // Slam down a bunch of info to the shaders
     var torchAngle = Math.atan2(this.mouse.x - this.player.pos.x, this.mouse.y - this.player.pos.y);
 
     this.gl.uniform1f(this.uLightAngle, torchAngle);
@@ -163,6 +172,18 @@ Lights.prototype.draw = function() {
     this.mvpMatrix = this.matrixMultiply(this.mvpMatrix, this.projectionMatrix);
     this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+
+    // Draw the creatures...
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.creatureBuffer);
+    this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
+    
+    for (var c = 0; c < this.creatures.length; c++) {
+        var creature = this.creatures[c];
+
+        this.mvpMatrix = this.matrixMultiply(creature.mvMatrix, this.projectionMatrix);
+        this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
+        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    }
 };
 
 // treats the level as a 20x20 grid (assuming the world stays 500x500)
@@ -172,10 +193,17 @@ Lights.prototype.spawnBrick = function(x, y) {
     this.bricks.push(brick);
 };
 
+Lights.prototype.spawnCreature= function(x, y) {
+    var creature = new Creature(x*BRICK_SIZE, y*BRICK_SIZE);
+
+    this.creatures.push(creature);
+};
+
 Lights.prototype.loadLevel = function(l) {
     for (var y = 0; y < l.length; y++) {
         for (var x = 0; x < l[y].length; x++) {
             if(l[y][x] === 1) this.spawnBrick(x, y);
+            if(l[y][x] === 2) this.spawnCreature(x, y);
         }
     }
 };
@@ -197,8 +225,11 @@ Lights.prototype.setEventHandlers = function() {
         this.sounds.click.play();
     }.bind(this));
 
-    kd.D.press(function() {
+    kd.D.down(function() {
         this.player.acc.x = PLAYER_ACC;
+    }.bind(this));
+    
+    kd.D.press(function() {
         this.sounds.breathing.play();
         this.sounds.outofbreath.stop();
     }.bind(this));
@@ -210,8 +241,11 @@ Lights.prototype.setEventHandlers = function() {
         this.sounds.outofbreath.play();
     }.bind(this));
     
-    kd.A.press(function() {
+    kd.A.down(function() {
         this.player.acc.x = -PLAYER_ACC;
+    }.bind(this));
+    
+    kd.A.press(function() {
         this.sounds.breathing.play();
         this.sounds.outofbreath.stop();
     }.bind(this));
@@ -225,6 +259,7 @@ Lights.prototype.setEventHandlers = function() {
     
     kd.W.press(function() {
         var underPlayer = new AABB(this.player.pos.x, this.player.pos.y + this.player.h, this.player.pos.x + this.player.w, this.player.pos.y + this.player.h + 1);
+
         for (var i = 0; i < this.bricks.length; i++) {
             var aabb = this.bricks[i].aabb;
             if(underPlayer.intersects(aabb)) {
@@ -305,6 +340,13 @@ Lights.prototype.loadBuffers = function() {
             BRICK_SIZE / 2, 0,
             BRICK_SIZE / 2, BRICK_SIZE
         ];
+    
+    var creatureVertices = [
+            0,          0,
+            0,          BRICK_SIZE / 2,
+            BRICK_SIZE / 2, 0,
+            BRICK_SIZE / 2, BRICK_SIZE / 2
+        ];
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(brickVertices), this.gl.STATIC_DRAW);
@@ -315,6 +357,8 @@ Lights.prototype.loadBuffers = function() {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.torchBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(torchVertices), this.gl.STATIC_DRAW);
 
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.creatureBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(creatureVertices), this.gl.STATIC_DRAW);
 };
 
 Lights.prototype.loadIdentity = function() {
