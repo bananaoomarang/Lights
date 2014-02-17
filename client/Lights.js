@@ -2,6 +2,7 @@ var fs = require('fs'),
     vertShader = fs.readFileSync(__dirname + '/vert.glsl'),
     fragShader = fs.readFileSync(__dirname + '/frag.glsl'),
     kd = require('./lib/keydrown.min.js'),
+    Howl = require('./lib/howler.min.js').Howl,
     Vector = require('./Vector'),
     AABB = require('./AABB'),
     Brick = require('./Brick'),
@@ -83,6 +84,11 @@ function Lights() {
     this.torchBuffer = this.gl.createBuffer();
     this.loadBuffers();
 
+    // Load sounds
+    this.sounds = {
+        click: new Howl({urls:['./sounds/click.wav']})
+    };
+
     $(document).mousemove(function(e) {
         var offset = $('canvas').offset();
         this.mouse.x = e.clientX - offset.left;
@@ -91,10 +97,12 @@ function Lights() {
 
     $(document).mousedown(function() {
         this.mouseDown = true;
+        this.sounds.click.play();
     }.bind(this));
     
     $(document).mouseup(function() {
         this.mouseDown = false;
+        this.sounds.click.play();
     }.bind(this));
 
     kd.D.down(function() {
