@@ -86,7 +86,9 @@ function Lights() {
 
     // Load sounds
     this.sounds = {
-        click: new Howl({urls:['./sounds/click.wav']})
+        click: new Howl({urls:['./sounds/click.wav']}),
+        breathing: new Howl({urls:['./sounds/breathing.ogg']}).loop(true),
+        outofbreath: new Howl({urls:['./sounds/outofbreath.wav']})
     };
 
     $(document).mousemove(function(e) {
@@ -105,22 +107,30 @@ function Lights() {
         this.sounds.click.play();
     }.bind(this));
 
-    kd.D.down(function() {
+    kd.D.press(function() {
         this.player.acc.x = PLAYER_ACC;
+        this.sounds.breathing.play();
+        this.sounds.outofbreath.stop();
     }.bind(this));
     
     kd.D.up(function() {
         this.player.acc.x = 0;
         this.player.vel.x = 0;
+        this.sounds.breathing.stop();
+        this.sounds.outofbreath.play();
     }.bind(this));
     
-    kd.A.down(function() {
+    kd.A.press(function() {
         this.player.acc.x = -PLAYER_ACC;
+        this.sounds.breathing.play();
+        this.sounds.outofbreath.stop();
     }.bind(this));
     
     kd.A.up(function() {
         this.player.acc.x = 0;
         this.player.vel.x = 0;
+        this.sounds.breathing.stop();
+        this.sounds.outofbreath.play();
     }.bind(this));
     
     kd.W.press(function() {
