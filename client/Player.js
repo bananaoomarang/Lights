@@ -13,6 +13,7 @@ function Player(x, y) {
 
     this.acc = new Vector(0, 0);
     this.vel = new Vector(0, 0);
+    this.friction = 1.0;
 
     this.vertexBuffer = null;
     this.mvMatrix = [1, 0, 0, 
@@ -59,6 +60,7 @@ Player.prototype.update = function(dt) {
 
 Player.prototype.applyPhysics = function(dt) {
     this.vel.add(this.acc.scalar(dt));
+    this.vel.x *= this.friction;
     
     if(this.vel.x > MAX_SPEED) {
         this.vel.x = MAX_SPEED;

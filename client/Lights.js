@@ -17,7 +17,8 @@ var WIDTH = 500,
     BRICK_SIZE = 25,
     GRAVITY = 300,
     PLAYER_ACC = 500,
-    PLAYER_JUMP = 150;
+    PLAYER_JUMP = 150,
+    GROUND_FRICTION = 0.89;
 
 var LEVEL = [ 
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -112,6 +113,19 @@ Lights.prototype.update = function(dt) {
 
     this.player.acc.y = GRAVITY;
 
+    // Default friciton to nothing
+    this.player.friction = 1.0;
+
+    if(this.onGround(this.player)) {
+        if(!kd.A.isDown() && !kd.D.isDown()) {
+            this.player.friction = GROUND_FRICTION;
+
+            if(Math.abs(this.player.vel.x) < 5) {
+                this.player.vel.x = 0;
+            }
+        } 
+    }
+    
     this.player.applyPhysics(dt);
     
     for (var b = 0; b < this.bricks.length; b++) {
@@ -119,10 +133,16 @@ Lights.prototype.update = function(dt) {
             intersect = this.player.aabb.intersects(brick.aabb);
 
         if(intersect) {
-            this.player.pos.add(intersect.scalar(-1));
+            if(Math.abs(intersect.x) > 0) {
+                this.player.pos.x -= intersect.x;
 
-            if(Math.abs(intersect.x) > 0) this.player.vel.x = 0;
-            if(Math.abs(intersect.y) > 0) this.player.vel.y = 0;
+                if(!this.onGround(this.player)) this.player.vel.x = 0;
+            }
+
+            if(Math.abs(intersect.y) > 0) {
+                this.player.pos.y -= intersect.y;
+                this.player.vel.y = 0;
+            }
         }
     }
 
@@ -225,48 +245,55 @@ Lights.prototype.setEventHandlers = function() {
         this.sounds.click.play();
     }.bind(this));
 
-    kd.D.down(function() {
-        this.player.acc.x = PLAYER_ACC;
-    }.bind(this));
-    
     kd.D.press(function() {
+        this.player.acc.x = PLAYER_ACC;
         this.sounds.breathing.play();
         this.sounds.outofbreath.stop();
     }.bind(this));
     
     kd.D.up(function() {
-        this.player.acc.x = 0;
-        this.player.vel.x = 0;
-        this.sounds.breathing.stop();
-        this.sounds.outofbreath.play();
-    }.bind(this));
-    
-    kd.A.down(function() {
-        this.player.acc.x = -PLAYER_ACC;
+        if(this.player.acc.x === PLAYER_ACC) {
+            this.player.acc.x = 0;
+            //this.player.vel.x = 0;
+            this.sounds.breathing.stop();
+            this.sounds.outofbreath.play();
+        }
     }.bind(this));
     
     kd.A.press(function() {
+        this.player.acc.x = -PLAYER_ACC;
         this.sounds.breathing.play();
         this.sounds.outofbreath.stop();
     }.bind(this));
     
     kd.A.up(function() {
-        this.player.acc.x = 0;
-        this.player.vel.x = 0;
-        this.sounds.breathing.stop();
-        this.sounds.outofbreath.play();
+        if(this.player.acc.x === -PLAYER_ACC) {
+            this.player.acc.x = 0;
+            //this.player.vel.x = 0;
+            this.sounds.breathing.stop();
+            this.sounds.outofbreath.play();
+        }
     }.bind(this));
     
     kd.W.press(function() {
-        var underPlayer = new AABB(this.player.pos.x, this.player.pos.y + this.player.h, this.player.pos.x + this.player.w, this.player.pos.y + this.player.h + 1);
+        if(this.onGround(this.player)) {
+            this.player.vel.y = -PLAYER_JUMP;
+        }
+    }.bind(this));
+};
+
+Lights.prototype.onGround = function(obj) {
+        var under = new AABB(obj.pos.x, obj.pos.y + obj.h, obj.pos.x + obj.w, obj.pos.y + obj.h + 1);
 
         for (var i = 0; i < this.bricks.length; i++) {
             var aabb = this.bricks[i].aabb;
-            if(underPlayer.intersects(aabb)) {
-                this.player.vel.y = -PLAYER_JUMP;
+
+            if(under.intersects(aabb)) {
+                return true;
             }
         }
-    }.bind(this));
+
+        return false;
 };
 
 Lights.prototype.getGL = function() {
