@@ -15,7 +15,7 @@ var WIDTH = 500,
     HEIGHT = 500,
     BRICK_SIZE = 25,
     GRAVITY = 300,
-    PLAYER_ACC = 300,
+    PLAYER_ACC = 500,
     PLAYER_JUMP = 150;
 
 var LEVEL = [ 
@@ -33,12 +33,12 @@ var LEVEL = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0],
+    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
 
 // Cancel the unneeded kdrown loop
@@ -69,6 +69,7 @@ function Lights() {
     this.getUniforms();
     
     this.gl.uniform1f(this.uLightIntensity, 500);
+    this.gl.uniform1f(this.uSpotDimming, 15);
 
     this.positionAttribute = this.gl.getAttribLocation(this.shaderProgram, "position");
 
@@ -92,57 +93,7 @@ function Lights() {
         outofbreath: new Howl({urls:['./sounds/outofbreath.wav']})
     };
 
-    $(document).mousemove(function(e) {
-        var offset = $('canvas').offset();
-        this.mouse.x = e.clientX - offset.left;
-        this.mouse.y = e.clientY - offset.top;
-    }.bind(this));
-
-    $(document).mousedown(function() {
-        this.mouseDown = true;
-        this.sounds.click.play();
-    }.bind(this));
-    
-    $(document).mouseup(function() {
-        this.mouseDown = false;
-        this.sounds.click.play();
-    }.bind(this));
-
-    kd.D.press(function() {
-        this.player.acc.x = PLAYER_ACC;
-        this.sounds.breathing.play();
-        this.sounds.outofbreath.stop();
-    }.bind(this));
-    
-    kd.D.up(function() {
-        this.player.acc.x = 0;
-        this.player.vel.x = 0;
-        this.sounds.breathing.stop();
-        this.sounds.outofbreath.play();
-    }.bind(this));
-    
-    kd.A.press(function() {
-        this.player.acc.x = -PLAYER_ACC;
-        this.sounds.breathing.play();
-        this.sounds.outofbreath.stop();
-    }.bind(this));
-    
-    kd.A.up(function() {
-        this.player.acc.x = 0;
-        this.player.vel.x = 0;
-        this.sounds.breathing.stop();
-        this.sounds.outofbreath.play();
-    }.bind(this));
-    
-    kd.W.press(function() {
-        var underPlayer = new AABB(this.player.pos.x, this.player.pos.y + this.player.h, this.player.pos.x + this.player.w, this.player.pos.y + this.player.h + 1);
-        for (var i = 0; i < this.bricks.length; i++) {
-            var aabb = this.bricks[i].aabb;
-            if(underPlayer.intersects(aabb)) {
-                this.player.vel.y = -PLAYER_JUMP;
-            }
-        }
-    }.bind(this));
+    this.setEventHandlers();
     
     this.loadLevel(LEVEL);
 }
@@ -152,7 +103,6 @@ Lights.prototype.update = function(dt) {
 
     if(this.mouseDown) {
         this.gl.uniform2f(this.uLightPos, this.player.torchMvMatrix[6], HEIGHT - (this.player.pos.y + (this.player.w / 2)));
-        this.gl.uniform1f(this.uSpotDimming, 15);
         this.gl.uniform1i(this.uLight, 1);
     } else {
         this.gl.uniform1i(this.uLight, 0);
@@ -228,6 +178,60 @@ Lights.prototype.loadLevel = function(l) {
             if(l[y][x] === 1) this.spawnBrick(x, y);
         }
     }
+};
+
+Lights.prototype.setEventHandlers = function() {
+    $(document).mousemove(function(e) {
+        var offset = $('canvas').offset();
+        this.mouse.x = e.clientX - offset.left;
+        this.mouse.y = e.clientY - offset.top;
+    }.bind(this));
+
+    $(document).mousedown(function() {
+        this.mouseDown = true;
+        this.sounds.click.play();
+    }.bind(this));
+    
+    $(document).mouseup(function() {
+        this.mouseDown = false;
+        this.sounds.click.play();
+    }.bind(this));
+
+    kd.D.press(function() {
+        this.player.acc.x = PLAYER_ACC;
+        this.sounds.breathing.play();
+        this.sounds.outofbreath.stop();
+    }.bind(this));
+    
+    kd.D.up(function() {
+        this.player.acc.x = 0;
+        this.player.vel.x = 0;
+        this.sounds.breathing.stop();
+        this.sounds.outofbreath.play();
+    }.bind(this));
+    
+    kd.A.press(function() {
+        this.player.acc.x = -PLAYER_ACC;
+        this.sounds.breathing.play();
+        this.sounds.outofbreath.stop();
+    }.bind(this));
+    
+    kd.A.up(function() {
+        this.player.acc.x = 0;
+        this.player.vel.x = 0;
+        this.sounds.breathing.stop();
+        this.sounds.outofbreath.play();
+    }.bind(this));
+    
+    kd.W.press(function() {
+        var underPlayer = new AABB(this.player.pos.x, this.player.pos.y + this.player.h, this.player.pos.x + this.player.w, this.player.pos.y + this.player.h + 1);
+        for (var i = 0; i < this.bricks.length; i++) {
+            var aabb = this.bricks[i].aabb;
+            if(underPlayer.intersects(aabb)) {
+                this.player.vel.y = -PLAYER_JUMP;
+            }
+        }
+    }.bind(this));
 };
 
 Lights.prototype.getGL = function() {

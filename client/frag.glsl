@@ -7,7 +7,7 @@ uniform vec2 uLightPos;
 uniform int uLight; // 0 = no light, 1 =... You guessed it.
 uniform float uLightAngle;
 uniform float uLightIntensity;
-uniform float uSpotDimming;
+uniform float uSpotDimming; // The higher the more the dimming effect at the edges of the spotlight
 
 vec4 getLight() {
     // Z coord is irrelavent

@@ -3,7 +3,7 @@ var Vector = require('./Vector'),
 
 module.exports = Player;
     
-var MAX_SPEED = 200;
+var MAX_SPEED = 250;
 
 function Player(x, y) {
     this.pos = new Vector(x, y);
