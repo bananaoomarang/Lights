@@ -39,13 +39,18 @@ Vector.prototype.scalar = function(s) {
     return new Vector(this.x*s, this.y*s);
 };
 
-// Returns the opposite vector
 Vector.prototype.reverse = function() {
     return new Vector(this.x * -1, this.y * -1);
 };
 
 Vector.prototype.dp = function(v) {
     return this.x*v.x + this.y*v.y;
+};
+
+Vector.prototype.normalize = function() {
+    var l = this.length();
+
+    return new Vector(this.x / l, this. x / l);
 };
 
 Vector.prototype.length = function() {

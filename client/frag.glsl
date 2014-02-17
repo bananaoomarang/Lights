@@ -7,24 +7,24 @@ uniform vec2 uLightPos;
 uniform int uLight; // 0 = no light, 1 =... You guessed it.
 uniform float uLightAngle;
 uniform float uLightIntensity;
+uniform float uSpotDimming;
 
 vec4 getLight() {
     // Z coord is irrelavent
     vec2 fragPos = vec2(gl_FragCoord.x, gl_FragCoord.y);
 
+    vec2 lightDir = vec2(uLightPos - fragPos);
+    vec2 spotDir  = vec2(cos(uLightAngle - (PI / 2.0)), sin(uLightAngle - (PI / 2.0)));
+
+    float spotEffect = dot(normalize(spotDir), normalize(-lightDir));
     float d = distance(uLightPos, fragPos);
 
-    float angleFromLight = atan(fragPos.x - uLightPos.x, -(fragPos.y - uLightPos.y)) - uLightAngle;
-    vec2 normalFromLight = vec2(cos(angleFromLight), sin(angleFromLight));
-    vec2 fragVector = normalize(fragPos) - normalFromLight;
+    if(spotEffect > cos(PI / 8.0)) {
+        spotEffect = pow(spotEffect, uSpotDimming);
+        float atten = spotEffect / (0.5 + 0.1*d + 0.05*d*d);
 
-    float dp = abs(dot(normalFromLight, normalize(fragPos)));
+        vec3 lightColor = vec3(atten, atten, atten) * uLightIntensity;
 
-    float atten = 1.0 / (1.0 + 0.0*d + 0.02*d*d);
-    
-    vec3 lightColor = vec3(atten, atten, atten) * uLightIntensity;
-
-    if(abs(angleFromLight) < (PI / 8.0) && abs(angleFromLight) > 0.0) {
         return vec4(lightColor, 1.0);
     } else {
         return vec4(0.0, 0.0, 0.0, 1.0);

@@ -26,6 +26,8 @@ function Player(x, y) {
 
 Player.prototype.update = function(dt) {
     this.vel.add(this.acc.scalar(dt));
+    
+    var facing = this.vel.normalize();
 
     if(this.vel.x > MAX_SPEED) {
         this.vel.x = MAX_SPEED;
@@ -39,7 +41,12 @@ Player.prototype.update = function(dt) {
 
     this.mvMatrix[6] = this.pos.x;
     this.mvMatrix[7] = this.pos.y;
-    
-    this.torchMvMatrix[6] = this.pos.x;
+
+    //if(facing.x < 0) {
+        this.torchMvMatrix[6] = this.pos.x;
+    //} else if(facing.x > 0) {
+        //this.torchMvMatrix[6] = this.pos.x + this.w;
+    //}
+        
     this.torchMvMatrix[7] = this.pos.y + (this.h / 2);
 };

@@ -63,9 +63,10 @@ function Lights() {
     this.uLight = null;
     this.uLightAngle = null;
     this.uLightIntensity = null;
+    this.uSpotDimming = null;
     this.getUniforms();
     
-    this.gl.uniform1f(this.uLightIntensity, 100);
+    this.gl.uniform1f(this.uLightIntensity, 500);
 
     this.positionAttribute = this.gl.getAttribLocation(this.shaderProgram, "position");
 
@@ -131,7 +132,8 @@ Lights.prototype.update = function(dt) {
     kd.tick();
 
     if(this.mouseDown) {
-        this.gl.uniform2f(this.uLightPos, this.player.pos.x, HEIGHT - (this.player.pos.y + (this.player.w / 2)));
+        this.gl.uniform2f(this.uLightPos, this.player.torchMvMatrix[6], HEIGHT - (this.player.pos.y + (this.player.w / 2)));
+        this.gl.uniform1f(this.uSpotDimming, 15);
         this.gl.uniform1i(this.uLight, 1);
     } else {
         this.gl.uniform1i(this.uLight, 0);
@@ -256,6 +258,7 @@ Lights.prototype.getUniforms = function() {
     this.uLight = this.gl.getUniformLocation(this.shaderProgram, 'uLight');
     this.uLightAngle = this.gl.getUniformLocation(this.shaderProgram, 'uLightAngle');
     this.uLightIntensity = this.gl.getUniformLocation(this.shaderProgram, 'uLightIntensity');
+    this.uSpotDimming = this.gl.getUniformLocation(this.shaderProgram, 'uSpotDimming');
 };
 
 Lights.prototype.loadBuffers = function() {
