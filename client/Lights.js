@@ -1,8 +1,8 @@
 var fs = require('fs'),
-    vertShader = fs.readFileSync(__dirname + '/vert.glsl'),
-    fragShader = fs.readFileSync(__dirname + '/frag.glsl'),
-    vertShaderTexture = fs.readFileSync(__dirname + '/vertTexture.glsl'),
-    fragShaderTexture = fs.readFileSync(__dirname + '/fragTexture.glsl'),
+    vertShader = fs.readFileSync(__dirname + '/shaders/vert.glsl'),
+    fragShader = fs.readFileSync(__dirname + '/shaders/frag.glsl'),
+    vertShaderTexture = fs.readFileSync(__dirname + '/shaders/vertTexture.glsl'),
+    fragShaderTexture = fs.readFileSync(__dirname + '/shaders/fragTexture.glsl'),
     kd = require('./lib/keydrown.min.js'),
     howler = require('./lib/howler.min.js'),
     Howl = howler.Howl,
@@ -213,28 +213,26 @@ Lights.prototype.draw = function() {
     for (var b = 0; b < this.bricks.length; b++) {
         var brick = this.bricks[b];
 
-        this.mvpMatrix = this.matrixMultiply(brick.mvMatrix, this.projectionMatrix);
-        this.gl.uniformMatrix3fv(this.defaultShader.uModelViewProjectionMatrix, false, this.mvpMatrix);
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+        this.drawArrays(brick.mvMatrix, this.defaultShader);
     }
 
     // Draw the player
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.playerBuffer);
     this.gl.vertexAttribPointer(this.defaultShader.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
 
-    this.mvpMatrix = this.matrixMultiply(this.player.mvMatrix, this.projectionMatrix);
-    this.gl.uniformMatrix3fv(this.defaultShader.uModelViewProjectionMatrix, false, this.mvpMatrix);
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    this.drawArrays(this.player.mvMatrix, this.defaultShader);
     
     // Draw the torch
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.torchBuffer);
     this.gl.vertexAttribPointer(this.defaultShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
     var torchAngle = Math.atan2(this.mouse.x - this.player.pos.x, this.mouse.y - this.player.pos.y);
-    this.mvpMatrix = this.matrixMultiply(this.makeRotationMatrix(torchAngle), this.player.torchMvMatrix);
-    this.mvpMatrix = this.matrixMultiply(this.mvpMatrix, this.projectionMatrix);
-    this.gl.uniformMatrix3fv(this.defaultShader.uModelViewProjectionMatrix, false, this.mvpMatrix);
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+
+    // Use the default mvMatrix to rotate it
+    this.loadIdentity();
+    this.modelViewMatrix = this.matrixMultiply(this.makeRotationMatrix(torchAngle), this.player.torchMvMatrix);
+
+    this.drawArrays(this.modelViewMatrix, this.defaultShader);
 
     // Draw the creatures...
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.creatureBuffer);
@@ -243,9 +241,7 @@ Lights.prototype.draw = function() {
     for (var c = 0; c < this.creatures.length; c++) {
         var creature = this.creatures[c];
 
-        this.mvpMatrix = this.matrixMultiply(creature.mvMatrix, this.projectionMatrix);
-        this.gl.uniformMatrix3fv(this.defaultShader.uModelViewProjectionMatrix, false, this.mvpMatrix);
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+        this.drawArrays(creature.mvMatrix, this.defaultShader);
     }
     
     // Render to the actual screen
@@ -255,24 +251,17 @@ Lights.prototype.draw = function() {
     this.gl.useProgram(this.postProduction);
     this.gl.enableVertexAttribArray(this.textureShader.aUV);
 
-    //this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.playerBuffer);
-
-    this.loadIdentity();
-
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.viewportQuad);
     this.gl.vertexAttribPointer(this.textureShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
-    this.gl.activeTexture(this.gl.TEXTURE0);
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.renderTexture);
     this.gl.uniform1i(this.textureShader.uTexture, 0);
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
     this.gl.vertexAttribPointer(this.textureShader.aUV, 2, this.gl.FLOAT, false, 0, 0);
 
-    this.mvpMatrix = this.matrixMultiply(this.modelViewMatrix, this.projectionMatrix);
-    this.gl.uniformMatrix3fv(this.textureShader.uModelViewProjectionMatrix, false, this.mvpMatrix);
-
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    this.loadIdentity();
+    this.drawArrays(this.modelViewMatrix, this.textureShader);
 };
 
 // treats the level as a 20x20 grid (assuming the world stays 500x500)
@@ -506,6 +495,12 @@ Lights.prototype.loadBuffers = function() {
 
     this.gl.bindTexture(this.gl.TEXTURE_2D, null);
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+};
+
+Lights.prototype.drawArrays = function(mvMatrix, shader) {
+    this.mvpMatrix = this.matrixMultiply(mvMatrix, this.projectionMatrix);
+    this.gl.uniformMatrix3fv(shader.uModelViewProjectionMatrix, false, this.mvpMatrix);
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
 };
 
 Lights.prototype.loadIdentity = function() {
