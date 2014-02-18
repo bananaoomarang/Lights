@@ -1,6 +1,8 @@
 var fs = require('fs'),
     vertShader = fs.readFileSync(__dirname + '/vert.glsl'),
     fragShader = fs.readFileSync(__dirname + '/frag.glsl'),
+    vertShaderTexture = fs.readFileSync(__dirname + '/vertTexture.glsl'),
+    fragShaderTexture = fs.readFileSync(__dirname + '/fragTexture.glsl'),
     kd = require('./lib/keydrown.min.js'),
     howler = require('./lib/howler.min.js'),
     Howl = howler.Howl,
@@ -43,6 +45,29 @@ var LEVEL = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
 
+//var LEVEL = [ 
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+//];
+
 // Cancel the unneeded kdrown loop
 kd.stop();
 
@@ -56,26 +81,33 @@ function Lights() {
     // Setup OpenGL Shiz
     this.gl = this.getGL();
     this.shaderProgram = this.getShaderProgram(vertShader, fragShader);
-    this.gl.useProgram(this.shaderProgram);
+    this.postProduction = this.getShaderProgram(vertShaderTexture, fragShaderTexture);
 
     this.projectionMatrix = this.makeProjectionMatrix(WIDTH, HEIGHT);
     this.modelViewMatrix = [];
     
-    this.uModelViewProjectionMatrix = null;
-    this.uColor = null;
-    this.uLightPos = null;
-    this.uLight = null;
-    this.uLightAngle = null;
-    this.uLightIntensity = null;
-    this.uSpotDimming = null;
+    this.defaultShader = {
+        aPos: this.gl.getAttribLocation(this.shaderProgram, "position"),
+        uModelViewProjectionMatrix: null,
+        uColor: null,
+        uLightPos: null,
+        uLight: null,
+        uLightAngle: null,
+        uLightIntensity: null,
+        uSpotDimming: null
+    };
+
+    this.textureShader = {
+        aPos: this.gl.getAttribLocation(this.postProduction, "position"),
+        aUV: this.gl.getAttribLocation(this.postProduction, "aUV"),
+        uModelViewProjectionMatrix: null,
+        uTexture: null
+    };
+
     this.getUniforms();
+    this.setUniformDefaults();
     
-    this.gl.uniform1f(this.uLightIntensity, 500);
-    this.gl.uniform1f(this.uSpotDimming, 15);
-
-    this.positionAttribute = this.gl.getAttribLocation(this.shaderProgram, "position");
-
-    this.gl.enableVertexAttribArray(this.positionAttribute);
+    this.setAttributes();
     
     this.loadIdentity();
     this.mvpMatrix = this.matrixMultiply(this.modelViewMatrix, this.projectionMatrix);
@@ -87,6 +119,11 @@ function Lights() {
     this.playerBuffer = this.gl.createBuffer();
     this.torchBuffer = this.gl.createBuffer();
     this.creatureBuffer = this.gl.createBuffer();
+
+    this.renderBuffer = this.gl.createFramebuffer();
+    this.renderTexture = this.gl.createTexture();
+    this.textureCoordBuffer = this.gl.createBuffer();
+    this.viewportQuad = this.gl.createBuffer();
     this.loadBuffers();
 
     // Load sounds
@@ -103,12 +140,18 @@ function Lights() {
 
 Lights.prototype.update = function(dt) {
     kd.tick();
+    
+    this.gl.useProgram(this.shaderProgram);
 
     if(this.mouseDown) {
-        this.gl.uniform2f(this.uLightPos, this.player.torchMvMatrix[6], HEIGHT - (this.player.pos.y + (this.player.w / 2)));
-        this.gl.uniform1i(this.uLight, 1);
+        // Slam down a bunch of info to the shaders
+        this.gl.uniform2f(this.defaultShader.uLightPos, this.player.torchMvMatrix[6], HEIGHT - (this.player.pos.y + (this.player.w / 2)));
+        this.gl.uniform1i(this.defaultShader.uLight, 1);
+        var torchAngle = Math.atan2(this.mouse.x - this.player.pos.x, this.mouse.y - this.player.pos.y);
+
+        this.gl.uniform1f(this.defaultShader.uLightAngle, torchAngle);
     } else {
-        this.gl.uniform1i(this.uLight, 0);
+        this.gl.uniform1i(this.defaultShader.uLight, 0);
     }
 
     this.player.acc.y = GRAVITY;
@@ -155,55 +198,81 @@ Lights.prototype.update = function(dt) {
 };
 
 Lights.prototype.draw = function() {
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.renderBuffer);
+    
+    this.gl.useProgram(this.shaderProgram);
 
+    this.gl.viewport(0, 0, 512, 512);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
     // Draw the bricks
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
-    this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.defaultShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
     for (var b = 0; b < this.bricks.length; b++) {
         var brick = this.bricks[b];
 
         this.mvpMatrix = this.matrixMultiply(brick.mvMatrix, this.projectionMatrix);
-        this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
+        this.gl.uniformMatrix3fv(this.defaultShader.uModelViewProjectionMatrix, false, this.mvpMatrix);
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
 
     // Draw the player
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.playerBuffer);
-    this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.defaultShader.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
 
     this.mvpMatrix = this.matrixMultiply(this.player.mvMatrix, this.projectionMatrix);
-    this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
+    this.gl.uniformMatrix3fv(this.defaultShader.uModelViewProjectionMatrix, false, this.mvpMatrix);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     
     // Draw the torch
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.torchBuffer);
-    this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.defaultShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
-    // Slam down a bunch of info to the shaders
     var torchAngle = Math.atan2(this.mouse.x - this.player.pos.x, this.mouse.y - this.player.pos.y);
-
-    this.gl.uniform1f(this.uLightAngle, torchAngle);
-
     this.mvpMatrix = this.matrixMultiply(this.makeRotationMatrix(torchAngle), this.player.torchMvMatrix);
     this.mvpMatrix = this.matrixMultiply(this.mvpMatrix, this.projectionMatrix);
-    this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
+    this.gl.uniformMatrix3fv(this.defaultShader.uModelViewProjectionMatrix, false, this.mvpMatrix);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
 
     // Draw the creatures...
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.creatureBuffer);
-    this.gl.vertexAttribPointer(this.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.defaultShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
     
     for (var c = 0; c < this.creatures.length; c++) {
         var creature = this.creatures[c];
 
         this.mvpMatrix = this.matrixMultiply(creature.mvMatrix, this.projectionMatrix);
-        this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
+        this.gl.uniformMatrix3fv(this.defaultShader.uModelViewProjectionMatrix, false, this.mvpMatrix);
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
+    
+    // Render to the actual screen
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+    this.gl.viewport(0, 0, WIDTH, HEIGHT);
+    
+    this.gl.useProgram(this.postProduction);
+    this.gl.enableVertexAttribArray(this.textureShader.aUV);
+
+    //this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.playerBuffer);
+
+    this.loadIdentity();
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.viewportQuad);
+    this.gl.vertexAttribPointer(this.textureShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
+
+    this.gl.activeTexture(this.gl.TEXTURE0);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.renderTexture);
+    this.gl.uniform1i(this.textureShader.uTexture, 0);
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
+    this.gl.vertexAttribPointer(this.textureShader.aUV, 2, this.gl.FLOAT, false, 0, 0);
+
+    this.mvpMatrix = this.matrixMultiply(this.modelViewMatrix, this.projectionMatrix);
+    this.gl.uniformMatrix3fv(this.textureShader.uModelViewProjectionMatrix, false, this.mvpMatrix);
+
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
 };
 
 // treats the level as a 20x20 grid (assuming the world stays 500x500)
@@ -337,13 +406,28 @@ Lights.prototype.getShaderProgram = function(vert, frag) {
 };
 
 Lights.prototype.getUniforms = function() {
-    this.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.shaderProgram, 'uModelViewProjectionMatrix');
-    this.uColor = this.gl.getUniformLocation(this.shaderProgram, 'uColor');
-    this.uLightPos = this.gl.getUniformLocation(this.shaderProgram, 'uLightPos');
-    this.uLight = this.gl.getUniformLocation(this.shaderProgram, 'uLight');
-    this.uLightAngle = this.gl.getUniformLocation(this.shaderProgram, 'uLightAngle');
-    this.uLightIntensity = this.gl.getUniformLocation(this.shaderProgram, 'uLightIntensity');
-    this.uSpotDimming = this.gl.getUniformLocation(this.shaderProgram, 'uSpotDimming');
+    this.defaultShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.shaderProgram, 'uModelViewProjectionMatrix');
+    this.defaultShader.uColor = this.gl.getUniformLocation(this.shaderProgram, 'uColor');
+    this.defaultShader.uLightPos = this.gl.getUniformLocation(this.shaderProgram, 'uLightPos');
+    this.defaultShader.uLight = this.gl.getUniformLocation(this.shaderProgram, 'uLight');
+    this.defaultShader.uLightAngle = this.gl.getUniformLocation(this.shaderProgram, 'uLightAngle');
+    this.defaultShader.uLightIntensity = this.gl.getUniformLocation(this.shaderProgram, 'uLightIntensity');
+    this.defaultShader.uSpotDimming = this.gl.getUniformLocation(this.shaderProgram, 'uSpotDimming');
+
+    this.textureShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.postProduction, 'uModelViewProjectionMatrix');
+    this.textureShader.uTexture = this.gl.getUniformLocation(this.postProduction, 'uTexture');
+};
+
+Lights.prototype.setUniformDefaults = function() {
+    this.gl.useProgram(this.shaderProgram);
+    this.gl.uniform1f(this.defaultShader.uLightIntensity, 500);
+    this.gl.uniform1f(this.defaultShader.uSpotDimming, 15);
+};
+
+Lights.prototype.setAttributes = function() {
+    this.gl.enableVertexAttribArray(this.defaultShader.aPos);
+
+    this.gl.enableVertexAttribArray(this.textureShader.aPos);
 };
 
 Lights.prototype.loadBuffers = function() {
@@ -352,28 +436,42 @@ Lights.prototype.loadBuffers = function() {
             0,          BRICK_SIZE,
             BRICK_SIZE, 0,
             BRICK_SIZE, BRICK_SIZE
-        ];
+    ];
     
     var playerVertices = [
             0,          0,
             0,          BRICK_SIZE*2,
             BRICK_SIZE, 0,
             BRICK_SIZE, BRICK_SIZE*2
-        ];
+    ];
 
     var torchVertices = [
             0,          0,
             0,          BRICK_SIZE,
             BRICK_SIZE / 2, 0,
             BRICK_SIZE / 2, BRICK_SIZE
-        ];
+    ];
     
     var creatureVertices = [
             0,          0,
             0,          BRICK_SIZE / 2,
             BRICK_SIZE / 2, 0,
             BRICK_SIZE / 2, BRICK_SIZE / 2
-        ];
+    ];
+
+    var viewportQuadVertices = [
+            0,   0,
+            0,   HEIGHT,
+            WIDTH, 0,
+            WIDTH, HEIGHT
+    ];
+
+    var textureCoords = [
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 1.0,
+        1.0, 0.0
+    ];
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(brickVertices), this.gl.STATIC_DRAW);
@@ -386,6 +484,28 @@ Lights.prototype.loadBuffers = function() {
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.creatureBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(creatureVertices), this.gl.STATIC_DRAW);
+    
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.viewportQuad);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(viewportQuadVertices), this.gl.STATIC_DRAW);
+    
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(textureCoords), this.gl.STATIC_DRAW);
+
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.renderBuffer);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.renderTexture);
+
+    this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 512, 512, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null);
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
+    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+
+    this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, this.renderTexture, 0);
+    
+    if(this.gl.checkFramebufferStatus(this.gl.FRAMEBUFFER) !== this.gl.FRAMEBUFFER_COMPLETE) {
+        console.log("Dayum, couldn't initialize a framebuffer on your GPU");
+    }
+
+    this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
 };
 
 Lights.prototype.loadIdentity = function() {
