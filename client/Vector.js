@@ -50,11 +50,11 @@ Vector.prototype.dp = function(v) {
 Vector.prototype.normalize = function() {
     var l = this.length();
 
-    return new Vector(this.x / l, this. x / l);
+    return new Vector(this.x / l, this.y / l);
 };
 
 Vector.prototype.length = function() {
-    return Math.sqrt(Math.pow(this.x, 2) * Math.pow(this.y, 2));
+    return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
 };
 
 Vector.prototype.angle = function(v) {

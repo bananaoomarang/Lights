@@ -21,19 +21,25 @@ vec4 getLight() {
 
     if(spotEffect > cos(PI / 8.0)) {
         spotEffect = pow(spotEffect, uSpotDimming);
-        float atten = spotEffect / (0.5 + 0.1*d + 0.05*d*d);
+        float atten = 1.0 / (0.5 + 0.1*d + 0.05*d*d);
 
         vec3 lightColor = vec3(atten, atten, atten) * uLightIntensity;
 
         return vec4(lightColor, 1.0);
     } else {
-        return vec4(0.0, 0.0, 0.0, 1.0);
+        spotEffect = pow(spotEffect, uSpotDimming);
+        float atten = 1.0 / (0.5 + 0.1*d + 0.05*d*d);
+
+        vec3 lightColor = vec3(atten, atten, atten) * uLightIntensity;
+
+        return vec4(lightColor, 1.0);
     }
 }
 
 void main() {
     if(uLight == 1) {
-        gl_FragColor = getLight();
+        /*gl_FragColor = getLight();*/
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     } else {
         gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     }
