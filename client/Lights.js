@@ -269,6 +269,8 @@ Lights.prototype.draw = function() {
     this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     this.loadIdentity();
+
+    this.gl.viewport(0, 0, 512, 1);
     
     this.gl.enableVertexAttribArray(this.shadowMapShader.aUV);
     
