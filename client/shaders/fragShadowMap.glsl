@@ -8,9 +8,6 @@ uniform int uStage;
 varying vec2 vUV;
 
 void main() {
-    /*gl_FragColor = texture2D(uTexture, vUV);*/
-    /*gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);*/
-
     float distance = 1.0;
 
     for(float y = 0.0; y < 512.0; y += 1.0) {
@@ -32,7 +29,7 @@ void main() {
 
         float caster = data.a;
 
-        if(caster > 0.75) {
+        if(caster == 1.0) {
             distance = min(distance, distanceTop);
 
             // TODO try returning here?

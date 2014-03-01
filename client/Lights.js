@@ -9,6 +9,7 @@ var fs = require('fs'),
     howler = require('./lib/howler.min.js'),
     Howl = howler.Howl,
     Vector = require('./Vector'),
+    FBO = require('./FBO'),
     AABB = require('./AABB'),
     Brick = require('./Brick'),
     Creature = require('./Creature'),
@@ -148,15 +149,13 @@ function Lights() {
     this.playerBuffer = this.gl.createBuffer();
     this.torchBuffer = this.gl.createBuffer();
     this.creatureBuffer = this.gl.createBuffer();
-
-    this.shadowMapFBO = this.gl.createFramebuffer();
-    this.shadowMap = this.gl.createTexture();
-
-    this.renderBuffer = this.gl.createFramebuffer();
-    this.renderTexture = this.gl.createTexture();
     this.textureCoordBuffer = this.gl.createBuffer();
     this.viewportQuad = this.gl.createBuffer();
+
     this.loadBuffers();
+    
+    this.shadowMapFBO = new FBO(this.gl, 512, 1);
+    this.renderBuffer = new FBO(this.gl, 512, 512);
 
     // Load sounds
     this.sounds = {
@@ -253,7 +252,7 @@ Lights.prototype.update = function(dt) {
 
 Lights.prototype.draw = function() {
     //1. Draw occlusion map to internal buffer
-    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.renderBuffer);
+    this.renderBuffer.bind();
     
     this.gl.useProgram(this.shaderProgram);
 
@@ -266,7 +265,7 @@ Lights.prototype.draw = function() {
     this.drawEntities();
     
     //2. Render a shadow map internally using occlusion map
-    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.shadowMapFBO);
+    this.shadowMapFBO.bind();
     this.gl.useProgram(this.shadowMapProgram);
 
     // Clear everything including alpha
@@ -279,7 +278,7 @@ Lights.prototype.draw = function() {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.viewportQuad);
     this.gl.vertexAttribPointer(this.shadowMapShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
-    this.gl.bindTexture(this.gl.TEXTURE_2D, this.renderTexture);
+    this.renderBuffer.bindTexture();
     this.gl.uniform1i(this.shadowMapShader.uTexture, 0);
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
@@ -291,19 +290,21 @@ Lights.prototype.draw = function() {
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
     this.gl.viewport(0, 0, WIDTH, HEIGHT);
     
+    // First draw the scene on a black background
     this.gl.useProgram(this.shaderProgram);
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
     this.drawEntities();
-    
+
+    // Then slam the lights on top
     this.gl.useProgram(this.postProduction);
     this.gl.enableVertexAttribArray(this.postShader.aUV);
     
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.viewportQuad);
     this.gl.vertexAttribPointer(this.shadowMapShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
-    this.gl.bindTexture(this.gl.TEXTURE_2D, this.shadowMap);
+    this.shadowMapFBO.bindTexture();
     this.gl.uniform1i(this.postShader.uTexture, 0);
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
@@ -588,27 +589,6 @@ Lights.prototype.loadBuffers = function() {
     
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(textureCoords), this.gl.STATIC_DRAW);
-
-    this.initFBO(this.shadowMapFBO, this.shadowMap, 512, 1);
-    this.initFBO(this.renderBuffer, this.renderTexture, 512, 512);
-};
-
-Lights.prototype.initFBO = function(buff, tex, w, h) {
-    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, buff);
-    this.gl.bindTexture(this.gl.TEXTURE_2D, tex);
-
-    this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, w, h, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null);
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST);
-    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-
-    this.gl.framebufferTexture2D(this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, this.gl.TEXTURE_2D, tex, 0);
-    
-    if(this.gl.checkFramebufferStatus(this.gl.FRAMEBUFFER) !== this.gl.FRAMEBUFFER_COMPLETE) {
-        console.log("Dayum, couldn't initialize a framebuffer on your GPU");
-    }
-
-    this.gl.bindTexture(this.gl.TEXTURE_2D, null);
-    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
 };
 
 Lights.prototype.drawArrays = function(mvMatrix, shader) {
