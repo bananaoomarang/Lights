@@ -64,7 +64,7 @@ var LEVEL = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -117,8 +117,8 @@ function Lights() {
     };
 
     this.textureShader = {
-        aPos: this.gl.getAttribLocation(this.postProduction, "position"),
-        aUV: this.gl.getAttribLocation(this.postProduction, "aUV"),
+        aPos: this.gl.getAttribLocation(this.textureProgram, "position"),
+        aUV: this.gl.getAttribLocation(this.textureProgram, "aUV"),
         uModelViewProjectionMatrix: null,
         uTexture: null
     };
@@ -138,7 +138,10 @@ function Lights() {
     this.loadIdentity();
     this.mvpMatrix = this.matrixMultiply(this.modelViewMatrix, this.projectionMatrix);
     this.gl.uniformMatrix3fv(this.uModelViewProjectionMatrix, false, this.mvpMatrix);
-    this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+    this.gl.enable(this.gl.BLEND);
+    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 
     // Set up buffers and the like
     this.brickBuffer = this.gl.createBuffer();
@@ -249,25 +252,24 @@ Lights.prototype.update = function(dt) {
 };
 
 Lights.prototype.draw = function() {
-    //1. Draw scene to internal buffer
+    //1. Draw occlusion map to internal buffer
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.renderBuffer);
     
     this.gl.useProgram(this.shaderProgram);
 
     this.gl.viewport(0, 0, 512, 512);
+    this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
         
     this.setLightUniforms();
 
     this.drawEntities();
     
-    //2. Render a shadow map
+    //2. Render a shadow map internally using occlusion map
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.shadowMapFBO);
     this.gl.useProgram(this.shadowMapProgram);
 
     // Clear everything including alpha
-    this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     this.loadIdentity();
 
     this.gl.viewport(0, 0, 512, 1);
@@ -277,7 +279,6 @@ Lights.prototype.draw = function() {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.viewportQuad);
     this.gl.vertexAttribPointer(this.shadowMapShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
-    // Bind the texture we just rendered to
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.renderTexture);
     this.gl.uniform1i(this.shadowMapShader.uTexture, 0);
 
@@ -286,19 +287,29 @@ Lights.prototype.draw = function() {
 
     this.drawArrays(this.modelViewMatrix, this.shadowMapShader);
     
-    //3. Composite final scene over screen
+    //3. Composite final scene over actual screen
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
     this.gl.viewport(0, 0, WIDTH, HEIGHT);
     
+    this.gl.useProgram(this.shaderProgram);
+    this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+    this.drawEntities();
+    
     this.gl.useProgram(this.postProduction);
     this.gl.enableVertexAttribArray(this.postShader.aUV);
+    
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.viewportQuad);
+    this.gl.vertexAttribPointer(this.shadowMapShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.shadowMap);
     this.gl.uniform1i(this.postShader.uTexture, 0);
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
     this.gl.vertexAttribPointer(this.textureShader.aUV, 2, this.gl.FLOAT, false, 0, 0);
-   
+
+    this.loadIdentity();
     this.drawArrays(this.modelViewMatrix, this.postShader);
 };
 

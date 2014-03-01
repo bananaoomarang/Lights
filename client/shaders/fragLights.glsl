@@ -39,5 +39,5 @@ void main() {
     sum += SMSample(vec2(SMUV.x + 3.0*blur, SMUV.y), r) * 0.09;
     sum += SMSample(vec2(SMUV.x + 4.0*blur, SMUV.y), r) * 0.05;
 
-    gl_FragColor = vec4(vec3(0.0), sum);
+    gl_FragColor = vec4(vec3(1.0), sum * smoothstep(1.0, 0.0, r));
 }
