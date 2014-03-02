@@ -4,6 +4,8 @@ const float PI = 3.14159;
 const float res = 256.0;
 
 uniform sampler2D uTexture;
+uniform vec2 uLightPos;
+uniform float uLightIntensity;
 
 varying vec2 vUV;
 
@@ -17,6 +19,8 @@ void main() {
     float theta = atan(norm.y, norm.x);
     float r = length(norm);
     float coord = -(theta + PI) / (2.0 * PI);
+    float d = distance(uLightPos, gl_FragCoord.xy);
+    float atten = 1.0 / (0.5 + 0.01*d + 0.3*d*d);
 
     // The tex coord to sample from our 1D shadow map
     vec2 SMUV = vec2(coord, 0.0);
@@ -40,5 +44,6 @@ void main() {
     sum += SMSample(vec2(SMUV.x + 3.0*blur, SMUV.y), r) * 0.09;
     sum += SMSample(vec2(SMUV.x + 4.0*blur, SMUV.y), r) * 0.05;
 
-    gl_FragColor = vec4(vec3(1.0), sum * smoothstep(1.0, 0.0, r));
+    gl_FragColor = vec4(vec3(1.0), sum * smoothstep(1.0, 0.0, r)) * atten * uLightIntensity;
+    /*gl_FragColor = vec4(vec3(atten) * 100.0, 1.0);*/
 }

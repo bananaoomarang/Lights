@@ -64,7 +64,7 @@ function Lights() {
     this.light = {
         pos: new Vector(0, 0),
         angle: 0,
-        intensity: 500,
+        intensity: 50,
         spotDimming: 15,
         on: false
     };
@@ -91,7 +91,7 @@ function Lights() {
 
     this.postProductionShader = new Shader(this.gl, vertShaderTexture, fragShaderLights, {
         attributes: ['aPos', 'aUV'],
-        uniforms: ['uModelViewProjectionMatrix', 'uTexture']
+        uniforms: ['uModelViewProjectionMatrix', 'uTexture', 'uLightPos', 'uLightIntensity']
     });
 
     this.projectionMatrix = this.makeProjectionMatrix(WIDTH, HEIGHT);
@@ -278,12 +278,12 @@ Lights.prototype.draw = function() {
     this.gl.vertexAttribPointer(this.postProductionShader.attributes.aUV, 2, this.gl.FLOAT, false, 0, 0);
 
     this.loadIdentity();
+    this.gl.uniform2f(this.postProductionShader.uniforms.uLightPos, this.mouse.x,  HEIGHT - this.mouse.y);
     this.drawArrays(this.modelViewMatrix, this.postProductionShader);
 };
 
 Lights.prototype.setLightUniforms = function() {
     // Slam down some uniforms
-    this.gl.uniform2f(this.defaultShader.uniforms.uLightPos, this.light.pos.x, this.light.pos.y);
     this.gl.uniform1f(this.defaultShader.uniforms.uLightAngle, this.light.angle);
 
     if(this.light.on) 
@@ -496,6 +496,9 @@ Lights.prototype.setUniformDefaults = function() {
     this.defaultShader.use();
     this.gl.uniform1f(this.defaultShader.uniforms.uLightIntensity, this.light.intensity);
     this.gl.uniform1f(this.defaultShader.uniforms.uSpotDimming, this.light.spotDimming);
+
+    this.postProductionShader.use();
+    this.gl.uniform1f(this.postProductionShader.uniforms.uLightIntensity, this.light.intensity);
 };
 
 Lights.prototype.setAttributes = function() {
