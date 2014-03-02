@@ -18,13 +18,15 @@ var fs = require('fs'),
 
 module.exports = Lights;
 
-var WIDTH = 500,
-    HEIGHT = 500,
+var WIDTH = 512,
+    HEIGHT = 512,
     BRICK_SIZE = 25,
     GRAVITY = 300,
     PLAYER_ACC = 500,
     PLAYER_JUMP = 150,
-    GROUND_FRICTION = 0.89;
+    GROUND_FRICTION = 0.89,
+    LIGHT_SIZE = 256,
+    HALF_LIGHT = LIGHT_SIZE / 2;
 
 var LEVEL = [ 
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -116,8 +118,8 @@ function Lights() {
 
     this.loadBuffers();
     
-    this.shadowMapFBO = new FBO(this.gl, 512, 1);
-    this.renderBuffer = new FBO(this.gl, 512, 512);
+    this.shadowMapFBO = new FBO(this.gl, LIGHT_SIZE, 1);
+    this.renderBuffer = new FBO(this.gl, LIGHT_SIZE, LIGHT_SIZE);
 
     // Load sounds
     this.sounds = {
@@ -218,22 +220,21 @@ Lights.prototype.draw = function() {
     
     this.defaultShader.use();
 
-    this.gl.viewport(0, 0, 512, 512);
+    this.gl.viewport(0, 0, WIDTH, HEIGHT);
     this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
         
     this.setLightUniforms();
 
-    this.drawEntities();
+    this.drawEntities(new AABB(this.mouse.x - HALF_LIGHT, this.mouse.y - HALF_LIGHT, this.mouse.x + HALF_LIGHT, this.mouse.y + HALF_LIGHT));
     
     //2. Render a shadow map internally using occlusion map
     this.shadowMapFBO.bind();
     this.shadowMapShader.use();
 
-    // Clear everything including alpha
     this.loadIdentity();
 
-    this.gl.viewport(0, 0, 512, 1);
+    this.gl.viewport(0, 0, LIGHT_SIZE, 1);
     
     this.gl.enableVertexAttribArray(this.shadowMapShader.attributes.aUV);
     
@@ -260,6 +261,8 @@ Lights.prototype.draw = function() {
     this.drawEntities();
 
     // Then slam the lights on top
+    this.gl.viewport(this.mouse.x - HALF_LIGHT, HEIGHT - (this.mouse.y + HALF_LIGHT), LIGHT_SIZE, LIGHT_SIZE);
+    //this.gl.viewport(0, 0, LIGHT_SIZE, LIGHT_SIZE);
     this.postProductionShader.use();
     this.gl.enableVertexAttribArray(this.postProductionShader.attributes.aUV);
     
@@ -267,10 +270,11 @@ Lights.prototype.draw = function() {
     this.gl.vertexAttribPointer(this.shadowMapShader.attributes.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
     this.shadowMapFBO.bindTexture();
+    //this.renderBuffer.bindTexture();
     this.gl.uniform1i(this.postProductionShader.uniforms.uTexture, 0);
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
-    this.gl.vertexAttribPointer(this.textureShader.attributes.aUV, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.postProductionShader.attributes.aUV, 2, this.gl.FLOAT, false, 0, 0);
 
     this.loadIdentity();
     this.drawArrays(this.modelViewMatrix, this.postProductionShader);
@@ -287,22 +291,42 @@ Lights.prototype.setLightUniforms = function() {
         this.gl.uniform1i(this.defaultShader.uniforms.uLight, 0);
 };
 
-Lights.prototype.drawEntities = function() {
+Lights.prototype.drawEntities = function(occlusion) {
+    var originCorrectionMatrix;
+
     // Draw the bricks
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
     this.gl.vertexAttribPointer(this.defaultShader.attributes.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
+    if(occlusion) {
+        originCorrectionMatrix = this.makeTranslationMatrix(-this.mouse.x + (HALF_LIGHT), (-this.mouse.y + HEIGHT) - (HALF_LIGHT));
+    }
+
     for (var b = 0; b < this.bricks.length; b++) {
         var brick = this.bricks[b];
 
-        this.drawArrays(brick.mvMatrix, this.defaultShader);
+        if(occlusion) {
+            if(brick.aabb.intersects(occlusion)) {
+                this.drawArrays(this.matrixMultiply(brick.mvMatrix, originCorrectionMatrix), this.defaultShader);
+            } else {
+                continue;
+            }
+        } else {
+            this.drawArrays(brick.mvMatrix, this.defaultShader);
+        }
     }
 
     // Draw the player
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.playerBuffer);
     this.gl.vertexAttribPointer(this.defaultShader.attributes.aPos, 2, this.gl.FLOAT, false, 0, 0);
-
-    this.drawArrays(this.player.mvMatrix, this.defaultShader);
+    
+    if(occlusion) {
+        if(this.player.pos.within(occlusion)) {
+            this.drawArrays(this.matrixMultiply(this.player.mvMatrix, originCorrectionMatrix), this.defaultShader);
+        }
+    } else {
+        this.drawArrays(this.player.mvMatrix, this.defaultShader);
+    }
     
     // Draw the torch
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.torchBuffer);
@@ -314,7 +338,11 @@ Lights.prototype.drawEntities = function() {
     this.loadIdentity();
     this.modelViewMatrix = this.matrixMultiply(this.makeRotationMatrix(torchAngle), this.player.torchMvMatrix);
 
-    this.drawArrays(this.modelViewMatrix, this.defaultShader);
+    if(occlusion) {
+        this.drawArrays(this.matrixMultiply(this.modelViewMatrix, originCorrectionMatrix), this.defaultShader);
+    } else {
+        this.drawArrays(this.modelViewMatrix, this.defaultShader);
+    }
 
     // Draw the creatures...
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.creatureBuffer);
@@ -322,8 +350,14 @@ Lights.prototype.drawEntities = function() {
     
     for (var c = 0; c < this.creatures.length; c++) {
         var creature = this.creatures[c];
-
-        this.drawArrays(creature.mvMatrix, this.defaultShader);
+        
+        if(occlusion) {
+            if(creature.aabb.intersects(occlusion)) {
+                this.drawArrays(this.matrixMultiply(creature.mvMatrix, originCorrectionMatrix), this.defaultShader);
+            }
+        } else {
+            this.drawArrays(creature.mvMatrix, this.defaultShader);
+        }
     }
 };
 
@@ -615,5 +649,13 @@ Lights.prototype.makeRotationMatrix = function(angle) {
         c, -s, 0,
         s,  c, 0,
         0,  0, 1
+    ];
+};
+
+Lights.prototype.makeTranslationMatrix = function(x, y) {
+    return [
+        1, 0, 0,
+        0, 1, 0,
+        x, y, 1
     ];
 };
