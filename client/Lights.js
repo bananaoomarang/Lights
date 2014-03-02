@@ -26,7 +26,8 @@ var WIDTH = 512,
     PLAYER_JUMP = 150,
     GROUND_FRICTION = 0.89,
     LIGHT_SIZE = 256,
-    HALF_LIGHT = LIGHT_SIZE / 2;
+    HALF_LIGHT = LIGHT_SIZE / 2,
+    SHADOW_QUALITY = 512; // Resolution of shadow map...
 
 var LEVEL = [ 
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -118,7 +119,7 @@ function Lights() {
 
     this.loadBuffers();
     
-    this.shadowMapFBO = new FBO(this.gl, LIGHT_SIZE, 1);
+    this.shadowMapFBO = new FBO(this.gl, SHADOW_QUALITY, 1);
     this.renderBuffer = new FBO(this.gl, LIGHT_SIZE, LIGHT_SIZE);
 
     // Load sounds
@@ -234,7 +235,7 @@ Lights.prototype.draw = function() {
 
     this.loadIdentity();
 
-    this.gl.viewport(0, 0, LIGHT_SIZE, 1);
+    this.gl.viewport(0, 0, SHADOW_QUALITY, 1);
     
     this.gl.enableVertexAttribArray(this.shadowMapShader.attributes.aUV);
     

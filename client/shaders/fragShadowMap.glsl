@@ -1,7 +1,7 @@
 precision mediump float;
 
 const float PI = 3.14159;
-const float res = 256.0;
+const float res = 512.0;
 
 uniform sampler2D uTexture;
 uniform int uStage;
@@ -30,7 +30,7 @@ void main() {
 
         float caster = data.a;
 
-        if(caster == 1.0) {
+        if(caster > 0.75) {
             distance = min(distance, distanceTop);
 
             // TODO try returning here?
