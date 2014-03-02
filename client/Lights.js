@@ -96,7 +96,6 @@ function Lights() {
     this.projectionMatrix = this.makeProjectionMatrix(WIDTH, HEIGHT);
     this.modelViewMatrix = [];
 
-    this.getUniforms();
     this.setUniformDefaults();
     
     this.setAttributes();
@@ -308,12 +307,12 @@ Lights.prototype.drawEntities = function(occlusion) {
 
         if(occlusion) {
             if(brick.aabb.intersects(occlusion)) {
-                this.drawArrays(this.matrixMultiply(brick.mvMatrix, originCorrectionMatrix), this.defaultShader);
+                this.drawArrays(this.matrixMultiply(brick.mvMatrix, originCorrectionMatrix));
             } else {
                 continue;
             }
         } else {
-            this.drawArrays(brick.mvMatrix, this.defaultShader);
+            this.drawArrays(brick.mvMatrix);
         }
     }
 
@@ -323,10 +322,10 @@ Lights.prototype.drawEntities = function(occlusion) {
     
     if(occlusion) {
         if(this.player.pos.within(occlusion)) {
-            this.drawArrays(this.matrixMultiply(this.player.mvMatrix, originCorrectionMatrix), this.defaultShader);
+            this.drawArrays(this.matrixMultiply(this.player.mvMatrix, originCorrectionMatrix));
         }
     } else {
-        this.drawArrays(this.player.mvMatrix, this.defaultShader);
+        this.drawArrays(this.player.mvMatrix);
     }
     
     // Draw the torch
@@ -340,9 +339,9 @@ Lights.prototype.drawEntities = function(occlusion) {
     this.modelViewMatrix = this.matrixMultiply(this.makeRotationMatrix(torchAngle), this.player.torchMvMatrix);
 
     if(occlusion) {
-        this.drawArrays(this.matrixMultiply(this.modelViewMatrix, originCorrectionMatrix), this.defaultShader);
+        this.drawArrays(this.matrixMultiply(this.modelViewMatrix, originCorrectionMatrix));
     } else {
-        this.drawArrays(this.modelViewMatrix, this.defaultShader);
+        this.drawArrays(this.modelViewMatrix);
     }
 
     // Draw the creatures...
@@ -354,10 +353,10 @@ Lights.prototype.drawEntities = function(occlusion) {
         
         if(occlusion) {
             if(creature.aabb.intersects(occlusion)) {
-                this.drawArrays(this.matrixMultiply(creature.mvMatrix, originCorrectionMatrix), this.defaultShader);
+                this.drawArrays(this.matrixMultiply(creature.mvMatrix, originCorrectionMatrix));
             }
         } else {
-            this.drawArrays(creature.mvMatrix, this.defaultShader);
+            this.drawArrays(creature.mvMatrix);
         }
     }
 };
@@ -492,26 +491,6 @@ Lights.prototype.getShaderProgram = function(vert, frag) {
     return program;
 };
 
-Lights.prototype.getUniforms = function() {
-    //this.defaultShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.defaultShader, 'uModelViewProjectionMatrix');
-    //this.defaultShader.uColor = this.gl.getUniformLocation(this.defaultShader, 'uColor');
-    //this.defaultShader.uLightPos = this.gl.getUniformLocation(this.defaultShader, 'uLightPos');
-    //this.defaultShader.uLight = this.gl.getUniformLocation(this.defaultShader, 'uLight');
-    //this.defaultShader.uLightAngle = this.gl.getUniformLocation(this.defaultShader, 'uLightAngle');
-    //this.defaultShader.uLightIntensity = this.gl.getUniformLocation(this.defaultShader, 'uLightIntensity');
-    //this.defaultShader.uSpotDimming = this.gl.getUniformLocation(this.defaultShader, 'uSpotDimming');
-
-    //this.shadowMapShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.shadowMapProgram, 'uModelViewProjectionMatrix');
-    //this.shadowMapShader.uTexture = this.gl.getUniformLocation(this.shadowMapProgram, 'uTexture');
-    //this.shadowMapShader.uStage = this.gl.getUniformLocation(this.shadowMapProgram, 'uStage');
-    
-    //this.textureShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.textureProgram, 'uModelViewProjectionMatrix');
-    //this.textureShader.uTexture = this.gl.getUniformLocation(this.textureProgram, 'uTexture');
-    
-    //this.postShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.postProduction, 'uModelViewProjectionMatrix');
-    //this.postShader.uTexture = this.gl.getUniformLocation(this.postProduction, 'uTexture');
-};
-
 Lights.prototype.setUniformDefaults = function() {
     this.defaultShader.use();
     this.gl.uniform1f(this.defaultShader.uniforms.uLightIntensity, this.light.intensity);
@@ -589,6 +568,8 @@ Lights.prototype.loadBuffers = function() {
 };
 
 Lights.prototype.drawArrays = function(mvMatrix, shader) {
+    if(!shader) shader = this.defaultShader;
+
     this.mvpMatrix = this.matrixMultiply(mvMatrix, this.projectionMatrix);
     this.gl.uniformMatrix3fv(shader.uniforms.uModelViewProjectionMatrix, false, this.mvpMatrix);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
