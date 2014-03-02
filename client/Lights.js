@@ -1,10 +1,4 @@
 var fs = require('fs'),
-    vertShader = fs.readFileSync(__dirname + '/shaders/vert.glsl'),
-    fragShader = fs.readFileSync(__dirname + '/shaders/frag.glsl'),
-    vertShaderTexture = fs.readFileSync(__dirname + '/shaders/vertTexture.glsl'),
-    fragShaderTexture = fs.readFileSync(__dirname + '/shaders/fragTexture.glsl'),
-    fragShaderLights = fs.readFileSync(__dirname + '/shaders/fragLights.glsl'),
-    fragShadowMap = fs.readFileSync(__dirname + '/shaders/fragShadowMap.glsl'),
     kd = require('./lib/keydrown.min.js'),
     howler = require('./lib/howler.min.js'),
     Howl = howler.Howl,
@@ -15,6 +9,14 @@ var fs = require('fs'),
     Brick = require('./Brick'),
     Creature = require('./Creature'),
     Player = require('./Player');
+    
+// Load Shaders
+var vertShader = fs.readFileSync(__dirname + '/shaders/default.vert'),
+    fragShader = fs.readFileSync(__dirname + '/shaders/default.frag'),
+    vertShaderTexture = fs.readFileSync(__dirname + '/shaders/texture.vert'),
+    fragShaderTexture = fs.readFileSync(__dirname + '/shaders/texture.frag'),
+    fragShaderLights = fs.readFileSync(__dirname + '/shaders/lights.frag'),
+    fragShadowMap = fs.readFileSync(__dirname + '/shaders/shadowMap.frag');
 
 module.exports = Lights;
 
@@ -72,22 +74,21 @@ function Lights() {
     // Setup OpenGL Shiz
     this.gl = this.getGL();
 
-    //this.defaultShader = this.getShaderProgram(vertShader, fragShader);
     this.defaultShader = new Shader(this.gl, vertShader, fragShader, {
         attributes: ['aPos'],
         uniforms: ['uModelViewProjectionMatrix', 'uColor', 'uLightPos', 'uLight', 'uLightAngle', 'uLightIntensity', 'uSpotDimming']
     });
-    //this.shadowMapProgram = this.getShaderProgram(vertShaderTexture, fragShadowMap);
+
     this.shadowMapShader = new Shader(this.gl, vertShaderTexture, fragShadowMap, {
         attributes: ['aPos', 'aUV'],
         uniforms: ['uModelViewProjectionMatrix', 'uTexture', 'uStage']
     });
-    //this.textureProgram = this.getShaderProgram(vertShaderTexture, fragShaderTexture);
+
     this.textureShader = new Shader(this.gl, vertShaderTexture, fragShaderTexture, {
         attributes: ['aPos', 'aUV'],
         uniforms: ['uModelViewProjectionMatrix', 'uTexture']
     });
-    //this.postProduction = this.getShaderProgram(vertShaderTexture, fragShaderLights);
+
     this.postProductionShader = new Shader(this.gl, vertShaderTexture, fragShaderLights, {
         attributes: ['aPos', 'aUV'],
         uniforms: ['uModelViewProjectionMatrix', 'uTexture']
