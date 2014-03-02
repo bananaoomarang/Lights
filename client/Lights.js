@@ -10,6 +10,7 @@ var fs = require('fs'),
     Howl = howler.Howl,
     Vector = require('./Vector'),
     FBO = require('./FBO'),
+    Shader = require('./Shader'),
     AABB = require('./AABB'),
     Brick = require('./Brick'),
     Creature = require('./Creature'),
@@ -24,29 +25,6 @@ var WIDTH = 500,
     PLAYER_ACC = 500,
     PLAYER_JUMP = 150,
     GROUND_FRICTION = 0.89;
-
-//var LEVEL = [ 
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    //[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0],
-    //[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    //[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-//];
 
 var LEVEL = [ 
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -90,46 +68,30 @@ function Lights() {
 
     // Setup OpenGL Shiz
     this.gl = this.getGL();
-    this.shaderProgram = this.getShaderProgram(vertShader, fragShader);
-    this.shadowMapProgram = this.getShaderProgram(vertShaderTexture, fragShadowMap);
-    this.textureProgram = this.getShaderProgram(vertShaderTexture, fragShaderTexture);
-    this.postProduction = this.getShaderProgram(vertShaderTexture, fragShaderLights);
+
+    //this.defaultShader = this.getShaderProgram(vertShader, fragShader);
+    this.defaultShader = new Shader(this.gl, vertShader, fragShader, {
+        attributes: ['aPos'],
+        uniforms: ['uModelViewProjectionMatrix', 'uColor', 'uLightPos', 'uLight', 'uLightAngle', 'uLightIntensity', 'uSpotDimming']
+    });
+    //this.shadowMapProgram = this.getShaderProgram(vertShaderTexture, fragShadowMap);
+    this.shadowMapShader = new Shader(this.gl, vertShaderTexture, fragShadowMap, {
+        attributes: ['aPos', 'aUV'],
+        uniforms: ['uModelViewProjectionMatrix', 'uTexture', 'uStage']
+    });
+    //this.textureProgram = this.getShaderProgram(vertShaderTexture, fragShaderTexture);
+    this.textureShader = new Shader(this.gl, vertShaderTexture, fragShaderTexture, {
+        attributes: ['aPos', 'aUV'],
+        uniforms: ['uModelViewProjectionMatrix', 'uTexture']
+    });
+    //this.postProduction = this.getShaderProgram(vertShaderTexture, fragShaderLights);
+    this.postProductionShader = new Shader(this.gl, vertShaderTexture, fragShaderLights, {
+        attributes: ['aPos', 'aUV'],
+        uniforms: ['uModelViewProjectionMatrix', 'uTexture']
+    });
 
     this.projectionMatrix = this.makeProjectionMatrix(WIDTH, HEIGHT);
     this.modelViewMatrix = [];
-    
-    this.defaultShader = {
-        aPos: this.gl.getAttribLocation(this.shaderProgram, "position"),
-        uModelViewProjectionMatrix: null,
-        uColor: null,
-        uLightPos: null,
-        uLight: null,
-        uLightAngle: null,
-        uLightIntensity: null,
-        uSpotDimming: null
-    };
-
-    this.shadowMapShader = {
-        aPos: this.gl.getAttribLocation(this.shadowMapProgram, "position"),
-        aUV: this.gl.getAttribLocation(this.shadowMapProgram, "aUV"),
-        uModelViewProjectionMatrix: null,
-        uTexture: null,
-        uStage: null
-    };
-
-    this.textureShader = {
-        aPos: this.gl.getAttribLocation(this.textureProgram, "position"),
-        aUV: this.gl.getAttribLocation(this.textureProgram, "aUV"),
-        uModelViewProjectionMatrix: null,
-        uTexture: null
-    };
-
-    this.postShader = {
-        aPos: this.gl.getAttribLocation(this.postProduction, "position"),
-        aUV: this.gl.getAttribLocation(this.postProduction, "aUV"),
-        uModelViewProjectionMatrix: null,
-        uTexture: null
-    };
 
     this.getUniforms();
     this.setUniformDefaults();
@@ -177,7 +139,7 @@ var n = new Vector(0, -1),
 Lights.prototype.update = function(dt) {
     kd.tick();
     
-    this.gl.useProgram(this.shaderProgram);
+    this.defaultShader.use();
 
     if(this.mouseDown) {
         this.light.pos.set(this.player.torchMvMatrix[6], HEIGHT - (this.player.pos.y + (this.player.h / 2)));
@@ -254,7 +216,7 @@ Lights.prototype.draw = function() {
     //1. Draw occlusion map to internal buffer
     this.renderBuffer.bind();
     
-    this.gl.useProgram(this.shaderProgram);
+    this.defaultShader.use();
 
     this.gl.viewport(0, 0, 512, 512);
     this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
@@ -266,23 +228,23 @@ Lights.prototype.draw = function() {
     
     //2. Render a shadow map internally using occlusion map
     this.shadowMapFBO.bind();
-    this.gl.useProgram(this.shadowMapProgram);
+    this.shadowMapShader.use();
 
     // Clear everything including alpha
     this.loadIdentity();
 
     this.gl.viewport(0, 0, 512, 1);
     
-    this.gl.enableVertexAttribArray(this.shadowMapShader.aUV);
+    this.gl.enableVertexAttribArray(this.shadowMapShader.attributes.aUV);
     
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.viewportQuad);
-    this.gl.vertexAttribPointer(this.shadowMapShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.shadowMapShader.attributes.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
     this.renderBuffer.bindTexture();
     this.gl.uniform1i(this.shadowMapShader.uTexture, 0);
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
-    this.gl.vertexAttribPointer(this.shadowMapShader.aUV, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.shadowMapShader.attributes.aUV, 2, this.gl.FLOAT, false, 0, 0);
 
     this.drawArrays(this.modelViewMatrix, this.shadowMapShader);
     
@@ -291,44 +253,44 @@ Lights.prototype.draw = function() {
     this.gl.viewport(0, 0, WIDTH, HEIGHT);
     
     // First draw the scene on a black background
-    this.gl.useProgram(this.shaderProgram);
+    this.defaultShader.use();
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
     this.drawEntities();
 
     // Then slam the lights on top
-    this.gl.useProgram(this.postProduction);
-    this.gl.enableVertexAttribArray(this.postShader.aUV);
+    this.postProductionShader.use();
+    this.gl.enableVertexAttribArray(this.postProductionShader.attributes.aUV);
     
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.viewportQuad);
-    this.gl.vertexAttribPointer(this.shadowMapShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.shadowMapShader.attributes.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
     this.shadowMapFBO.bindTexture();
-    this.gl.uniform1i(this.postShader.uTexture, 0);
+    this.gl.uniform1i(this.postProductionShader.uniforms.uTexture, 0);
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
-    this.gl.vertexAttribPointer(this.textureShader.aUV, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.textureShader.attributes.aUV, 2, this.gl.FLOAT, false, 0, 0);
 
     this.loadIdentity();
-    this.drawArrays(this.modelViewMatrix, this.postShader);
+    this.drawArrays(this.modelViewMatrix, this.postProductionShader);
 };
 
 Lights.prototype.setLightUniforms = function() {
     // Slam down some uniforms
-    this.gl.uniform2f(this.defaultShader.uLightPos, this.light.pos.x, this.light.pos.y);
-    this.gl.uniform1f(this.defaultShader.uLightAngle, this.light.angle);
+    this.gl.uniform2f(this.defaultShader.uniforms.uLightPos, this.light.pos.x, this.light.pos.y);
+    this.gl.uniform1f(this.defaultShader.uniforms.uLightAngle, this.light.angle);
 
     if(this.light.on) 
-        this.gl.uniform1i(this.defaultShader.uLight, 1);
+        this.gl.uniform1i(this.defaultShader.uniforms.uLight, 1);
     else
-        this.gl.uniform1i(this.defaultShader.uLight, 0);
+        this.gl.uniform1i(this.defaultShader.uniforms.uLight, 0);
 };
 
 Lights.prototype.drawEntities = function() {
     // Draw the bricks
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.brickBuffer);
-    this.gl.vertexAttribPointer(this.defaultShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.defaultShader.attributes.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
     for (var b = 0; b < this.bricks.length; b++) {
         var brick = this.bricks[b];
@@ -338,13 +300,13 @@ Lights.prototype.drawEntities = function() {
 
     // Draw the player
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.playerBuffer);
-    this.gl.vertexAttribPointer(this.defaultShader.positionAttribute, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.defaultShader.attributes.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
     this.drawArrays(this.player.mvMatrix, this.defaultShader);
     
     // Draw the torch
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.torchBuffer);
-    this.gl.vertexAttribPointer(this.defaultShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.defaultShader.attributes.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
     var torchAngle = Math.atan2(this.mouse.x - this.player.pos.x, this.mouse.y - this.player.pos.y);
 
@@ -356,7 +318,7 @@ Lights.prototype.drawEntities = function() {
 
     // Draw the creatures...
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.creatureBuffer);
-    this.gl.vertexAttribPointer(this.defaultShader.aPos, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.vertexAttribPointer(this.defaultShader.attributes.aPos, 2, this.gl.FLOAT, false, 0, 0);
     
     for (var c = 0; c < this.creatures.length; c++) {
         var creature = this.creatures[c];
@@ -496,37 +458,37 @@ Lights.prototype.getShaderProgram = function(vert, frag) {
 };
 
 Lights.prototype.getUniforms = function() {
-    this.defaultShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.shaderProgram, 'uModelViewProjectionMatrix');
-    this.defaultShader.uColor = this.gl.getUniformLocation(this.shaderProgram, 'uColor');
-    this.defaultShader.uLightPos = this.gl.getUniformLocation(this.shaderProgram, 'uLightPos');
-    this.defaultShader.uLight = this.gl.getUniformLocation(this.shaderProgram, 'uLight');
-    this.defaultShader.uLightAngle = this.gl.getUniformLocation(this.shaderProgram, 'uLightAngle');
-    this.defaultShader.uLightIntensity = this.gl.getUniformLocation(this.shaderProgram, 'uLightIntensity');
-    this.defaultShader.uSpotDimming = this.gl.getUniformLocation(this.shaderProgram, 'uSpotDimming');
+    //this.defaultShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.defaultShader, 'uModelViewProjectionMatrix');
+    //this.defaultShader.uColor = this.gl.getUniformLocation(this.defaultShader, 'uColor');
+    //this.defaultShader.uLightPos = this.gl.getUniformLocation(this.defaultShader, 'uLightPos');
+    //this.defaultShader.uLight = this.gl.getUniformLocation(this.defaultShader, 'uLight');
+    //this.defaultShader.uLightAngle = this.gl.getUniformLocation(this.defaultShader, 'uLightAngle');
+    //this.defaultShader.uLightIntensity = this.gl.getUniformLocation(this.defaultShader, 'uLightIntensity');
+    //this.defaultShader.uSpotDimming = this.gl.getUniformLocation(this.defaultShader, 'uSpotDimming');
 
-    this.shadowMapShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.shadowMapProgram, 'uModelViewProjectionMatrix');
-    this.shadowMapShader.uTexture = this.gl.getUniformLocation(this.shadowMapProgram, 'uTexture');
-    this.shadowMapShader.uStage = this.gl.getUniformLocation(this.shadowMapProgram, 'uStage');
+    //this.shadowMapShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.shadowMapProgram, 'uModelViewProjectionMatrix');
+    //this.shadowMapShader.uTexture = this.gl.getUniformLocation(this.shadowMapProgram, 'uTexture');
+    //this.shadowMapShader.uStage = this.gl.getUniformLocation(this.shadowMapProgram, 'uStage');
     
-    this.textureShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.textureProgram, 'uModelViewProjectionMatrix');
-    this.textureShader.uTexture = this.gl.getUniformLocation(this.textureProgram, 'uTexture');
+    //this.textureShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.textureProgram, 'uModelViewProjectionMatrix');
+    //this.textureShader.uTexture = this.gl.getUniformLocation(this.textureProgram, 'uTexture');
     
-    this.postShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.postProduction, 'uModelViewProjectionMatrix');
-    this.postShader.uTexture = this.gl.getUniformLocation(this.postProduction, 'uTexture');
+    //this.postShader.uModelViewProjectionMatrix = this.gl.getUniformLocation(this.postProduction, 'uModelViewProjectionMatrix');
+    //this.postShader.uTexture = this.gl.getUniformLocation(this.postProduction, 'uTexture');
 };
 
 Lights.prototype.setUniformDefaults = function() {
-    this.gl.useProgram(this.shaderProgram);
-    this.gl.uniform1f(this.defaultShader.uLightIntensity, this.light.intensity);
-    this.gl.uniform1f(this.defaultShader.uSpotDimming, this.light.spotDimming);
+    this.defaultShader.use();
+    this.gl.uniform1f(this.defaultShader.uniforms.uLightIntensity, this.light.intensity);
+    this.gl.uniform1f(this.defaultShader.uniforms.uSpotDimming, this.light.spotDimming);
 };
 
 Lights.prototype.setAttributes = function() {
-    this.gl.enableVertexAttribArray(this.defaultShader.aPos);
+    this.gl.enableVertexAttribArray(this.defaultShader.attributes.aPos);
 
-    this.gl.enableVertexAttribArray(this.textureShader.aPos);
+    this.gl.enableVertexAttribArray(this.textureShader.attributes.aPos);
     
-    this.gl.enableVertexAttribArray(this.shadowMapShader.aPos);
+    this.gl.enableVertexAttribArray(this.shadowMapShader.attributes.aPos);
 };
 
 Lights.prototype.loadBuffers = function() {
@@ -593,7 +555,7 @@ Lights.prototype.loadBuffers = function() {
 
 Lights.prototype.drawArrays = function(mvMatrix, shader) {
     this.mvpMatrix = this.matrixMultiply(mvMatrix, this.projectionMatrix);
-    this.gl.uniformMatrix3fv(shader.uModelViewProjectionMatrix, false, this.mvpMatrix);
+    this.gl.uniformMatrix3fv(shader.uniforms.uModelViewProjectionMatrix, false, this.mvpMatrix);
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
 };
 
