@@ -4,7 +4,6 @@ const float PI = 3.1415826;
 
 uniform vec4 uColor;
 uniform vec2 uLightPos;
-uniform int uLight; // 0 = no light, 1 =... You guessed it.
 uniform float uLightAngle;
 uniform float uLightIntensity;
 uniform float uSpotDimming; // The higher the more the dimming effect at the edges of the spotlight
@@ -37,11 +36,6 @@ vec4 getLight() {
 }
 
 void main() {
-    if(uLight == 1) {
-        /*gl_FragColor = getLight();*/
         gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    } else {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    }
 }
 

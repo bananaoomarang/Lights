@@ -20,9 +20,13 @@ function Player(x, y) {
                      0, 1, 0,
                      x, y, 1];
 
-    this.torchMvMatrix = [1, 0, 0, 
-                          0, 1, 0,
-                          x, y + (this.h / 2), 1];
+    this.torch = {
+        pos: new Vector(),
+        mvMatrix:
+            [1, 0, 0, 
+             0, 1, 0,
+             x, y + (this.h / 2), 1]
+    };
 
     // Override vector function for pro hax
     this.pos.add = function(v) {
@@ -47,15 +51,10 @@ function Player(x, y) {
 }
 
 Player.prototype.update = function(dt) {
-    var facing = this.vel.normalize();
+    this.torch.mvMatrix[6] = this.pos.x;
+    this.torch.mvMatrix[7] = this.pos.y + (this.h / 2);
 
-    //if(facing.x < 0) {
-        this.torchMvMatrix[6] = this.pos.x;
-    //} else if(facing.x > 0) {
-        //this.torchMvMatrix[6] = this.pos.x + this.w;
-    //}
-        
-    this.torchMvMatrix[7] = this.pos.y + (this.h / 2);
+    this.torch.pos.set(this.torch.mvMatrix[6], this.torch.mvMatrix[7]);
 };
 
 Player.prototype.applyPhysics = function(dt) {

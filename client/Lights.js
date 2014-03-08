@@ -59,7 +59,7 @@ kd.stop();
 
 function Lights() {
     this.mouse = new Vector(0, 0);
-    this.mouseDown = false;
+    this.mouse.down = false;
     this.player = new Player(0, 0);
     this.light = {
         pos: new Vector(0, 0),
@@ -76,7 +76,7 @@ function Lights() {
 
     this.defaultShader = new Shader(this.gl, vertShader, fragShader, {
         attributes: ['aPos'],
-        uniforms: ['uModelViewProjectionMatrix', 'uColor', 'uLightPos', 'uLight', 'uLightAngle', 'uLightIntensity', 'uSpotDimming']
+        uniforms: ['uModelViewProjectionMatrix', 'uColor', 'uLightPos', 'uLightAngle', 'uLightIntensity', 'uSpotDimming']
     });
 
     this.shadowMapShader = new Shader(this.gl, vertShaderTexture, fragShadowMap, {
@@ -91,7 +91,7 @@ function Lights() {
 
     this.postProductionShader = new Shader(this.gl, vertShaderTexture, fragShaderLights, {
         attributes: ['aPos', 'aUV'],
-        uniforms: ['uModelViewProjectionMatrix', 'uTexture', 'uLightPos', 'uLightIntensity']
+        uniforms: ['uModelViewProjectionMatrix', 'uTexture', 'uLightPos', 'uLightIntensity', 'uLightAngle']
     });
 
     this.projectionMatrix = this.makeProjectionMatrix(WIDTH, HEIGHT);
@@ -144,13 +144,14 @@ Lights.prototype.update = function(dt) {
     
     this.defaultShader.use();
 
-    if(this.mouseDown) {
-        this.light.pos.set(this.player.torchMvMatrix[6], HEIGHT - (this.player.pos.y + (this.player.h / 2)));
-        this.light.angle = Math.atan2(this.mouse.x - this.player.pos.x, this.mouse.y - this.player.pos.y);
+    if(this.mouse.down) {
         this.light.on = true;
     } else {
-        this.light.on = true;
+        this.light.on = false;
     }
+
+    this.light.pos.set(this.player.torch.mvMatrix[6], HEIGHT - (this.player.pos.y + (this.player.h / 2)));
+    this.light.angle = Math.atan2(this.mouse.x - this.player.pos.x, this.mouse.y - this.player.pos.y);
 
     this.player.acc.y = GRAVITY;
 
@@ -216,6 +217,13 @@ Lights.prototype.update = function(dt) {
 };
 
 Lights.prototype.draw = function() {
+    if(!this.light.on) {
+        //Just clear the screen;
+        this.gl.viewport(0, 0, WIDTH, HEIGHT);
+        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+        return;
+    }
     //1. Draw occlusion map to internal buffer
     this.renderBuffer.bind();
     
@@ -227,8 +235,8 @@ Lights.prototype.draw = function() {
         
     this.setLightUniforms();
 
-    this.drawEntities(new AABB(this.mouse.x - HALF_LIGHT, this.mouse.y - HALF_LIGHT, this.mouse.x + HALF_LIGHT, this.mouse.y + HALF_LIGHT));
-    
+    this.drawEntities(new AABB(this.player.torch.pos.x - HALF_LIGHT, this.player.torch.pos.y - HALF_LIGHT, this.player.torch.pos.x + HALF_LIGHT, this.player.torch.pos.y + HALF_LIGHT));
+
     //2. Render a shadow map internally using occlusion map
     this.shadowMapFBO.bind();
     this.shadowMapShader.use();
@@ -254,16 +262,13 @@ Lights.prototype.draw = function() {
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
     this.gl.viewport(0, 0, WIDTH, HEIGHT);
     
-    // First draw the scene on a black background
-    this.defaultShader.use();
+    // First clear to black
     this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
-    this.drawEntities();
+    // Then slam the lights on top if necessary
+    this.gl.viewport(this.player.torch.pos.x - HALF_LIGHT, HEIGHT - (this.player.torch.pos.y + HALF_LIGHT), LIGHT_SIZE, LIGHT_SIZE);
 
-    // Then slam the lights on top
-    this.gl.viewport(this.mouse.x - HALF_LIGHT, HEIGHT - (this.mouse.y + HALF_LIGHT), LIGHT_SIZE, LIGHT_SIZE);
-    //this.gl.viewport(0, 0, LIGHT_SIZE, LIGHT_SIZE);
     this.postProductionShader.use();
     this.gl.enableVertexAttribArray(this.postProductionShader.attributes.aUV);
     
@@ -278,18 +283,14 @@ Lights.prototype.draw = function() {
     this.gl.vertexAttribPointer(this.postProductionShader.attributes.aUV, 2, this.gl.FLOAT, false, 0, 0);
 
     this.loadIdentity();
-    this.gl.uniform2f(this.postProductionShader.uniforms.uLightPos, this.mouse.x,  HEIGHT - this.mouse.y);
+    this.gl.uniform2f(this.postProductionShader.uniforms.uLightPos, this.player.torch.pos.x, HEIGHT - this.player.torch.pos.y);
+    this.gl.uniform1f(this.postProductionShader.uniforms.uLightAngle, this.light.angle);
     this.drawArrays(this.modelViewMatrix, this.postProductionShader);
 };
 
 Lights.prototype.setLightUniforms = function() {
     // Slam down some uniforms
     this.gl.uniform1f(this.defaultShader.uniforms.uLightAngle, this.light.angle);
-
-    if(this.light.on) 
-        this.gl.uniform1i(this.defaultShader.uniforms.uLight, 1);
-    else
-        this.gl.uniform1i(this.defaultShader.uniforms.uLight, 0);
 };
 
 Lights.prototype.drawEntities = function(occlusion) {
@@ -300,7 +301,7 @@ Lights.prototype.drawEntities = function(occlusion) {
     this.gl.vertexAttribPointer(this.defaultShader.attributes.aPos, 2, this.gl.FLOAT, false, 0, 0);
 
     if(occlusion) {
-        originCorrectionMatrix = this.makeTranslationMatrix(-this.mouse.x + (HALF_LIGHT), (-this.mouse.y + HEIGHT) - (HALF_LIGHT));
+        originCorrectionMatrix = this.makeTranslationMatrix(-this.player.torch.pos.x + (HALF_LIGHT), (-this.player.torch.pos.y + HEIGHT) - HALF_LIGHT);
     }
 
     for (var b = 0; b < this.bricks.length; b++) {
@@ -322,8 +323,8 @@ Lights.prototype.drawEntities = function(occlusion) {
     this.gl.vertexAttribPointer(this.defaultShader.attributes.aPos, 2, this.gl.FLOAT, false, 0, 0);
     
     if(occlusion) {
-        if(this.player.pos.within(occlusion)) {
-            this.drawArrays(this.matrixMultiply(this.player.mvMatrix, originCorrectionMatrix));
+        if(this.player.aabb.intersects(occlusion)) {
+            //this.drawArrays(this.matrixMultiply(this.player.mvMatrix, originCorrectionMatrix));
         }
     } else {
         this.drawArrays(this.player.mvMatrix);
@@ -337,10 +338,10 @@ Lights.prototype.drawEntities = function(occlusion) {
 
     // Use the default mvMatrix to rotate it
     this.loadIdentity();
-    this.modelViewMatrix = this.matrixMultiply(this.makeRotationMatrix(torchAngle), this.player.torchMvMatrix);
+    this.modelViewMatrix = this.matrixMultiply(this.makeRotationMatrix(torchAngle), this.player.torch.mvMatrix);
 
     if(occlusion) {
-        this.drawArrays(this.matrixMultiply(this.modelViewMatrix, originCorrectionMatrix));
+        //this.drawArrays(this.matrixMultiply(this.modelViewMatrix, originCorrectionMatrix));
     } else {
         this.drawArrays(this.modelViewMatrix);
     }
@@ -387,17 +388,17 @@ Lights.prototype.loadLevel = function(l) {
 Lights.prototype.setEventHandlers = function() {
     $(document).mousemove(function(e) {
         var offset = $('canvas').offset();
-        this.mouse.x = e.clientX - offset.left;
-        this.mouse.y = e.clientY - offset.top;
+
+        this.mouse.set(e.clientX - offset.left, e.clientY - offset.top);
     }.bind(this));
 
     $(document).mousedown(function() {
-        this.mouseDown = true;
+        this.mouse.down = true;
         this.sounds.click.play();
     }.bind(this));
     
     $(document).mouseup(function() {
-        this.mouseDown = false;
+        this.mouse.down = false;
         this.sounds.click.play();
     }.bind(this));
 
